@@ -4,12 +4,18 @@ import os
 
 new_level = 'level2.txt'
 
-FPS = 60
+FPS = 1000
+STEP = 3
 pygame.init()
-STEP = 5
-size = width, height = 1000, 700
+size = width, height = 1700, 1000
 clock = pygame.time.Clock()
-screen = pygame.display.set_mode(size)
+pygame.mixer.init()
+pygame.mixer.music.load('fonovaya_musick .wav')
+pygame.mixer.music.play()
+sound1 = pygame.mixer.Sound('steps.wav')
+pygame.mixer.music.unpause()
+pygame.mixer.music.set_volume(0.05)
+screen = pygame.display.set_mode(size, pygame.FULLSCREEN)
 
 
 def load_image(name, colorkey=None):
@@ -28,7 +34,7 @@ def load_image(name, colorkey=None):
     return image
 
 
-tile_images = {'wall': load_image('wall.png'), 'empty': load_image('floor.png'), 'street': load_image('street.png'),
+tile_images = {'wall': load_image('floor_1.png'), 'empty': load_image('wall_1.png'), 'street': load_image('street.png'),
                'left': load_image('left.png'), 'right': load_image('right.png'), 'down': load_image('down.png')}
 player_image = load_image('mar.png')
 tile_width, tile_height = 50, 50
@@ -64,6 +70,7 @@ def load_level(file):
         with open(file, 'r') as f:
             map_level = list(map(str.strip, f.readlines()))
         max_width = max(map(len, map_level))
+        pygame.mouse.set_visible(False)
         return list(map(lambda x: x.ljust(max_width, '.'), map_level))
     except FileNotFoundError:
         terminate()
@@ -107,7 +114,8 @@ class Camera:
 class Tile(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         super().__init__(tile_group, all_sprites)
-        if tile_type == 'wall' or tile_type == 'street' or tile_type == 'left' or tile_type == 'right' or tile_type == 'down':
+        if tile_type == 'wall' or tile_type == 'street' or tile_type == 'left' or tile_type == 'right' or \
+                tile_type == 'down':
             self.add(wall_group)
         self.image = tile_images[tile_type]
         self.rect = self.image.get_rect()
@@ -123,6 +131,20 @@ class Player(pygame.sprite.Sprite):
         self.rect.x, self.rect.y = tile_width * pos_x + 13, tile_height * pos_y + 5
 
 
+class Cur(pygame.sprite.Sprite):
+    image = load_image('cur.png')
+
+    def __init__(self, *group):
+        super().__init__(*group)
+        self.image = Cur.image
+        self.rect = self.image.get_rect()
+
+    def update(self, *args):
+        x, y = pygame.mouse.get_pos()
+        self.rect.x = x
+        self.rect.y = y
+
+
 def terminate():
     sys.exit()
 
@@ -131,6 +153,7 @@ all_sprites = pygame.sprite.Group()
 tile_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 wall_group = pygame.sprite.Group()
+Cur(all_sprites)
 start_screen()
 run = True
 player, level_x, level_y = generate_level(load_level(new_level))
@@ -183,6 +206,7 @@ while run:
     for sprite in all_sprites:
         camera.apply(sprite)
     screen.fill('black')
+    all_sprites.draw(screen)
     tile_group.draw(screen)
     wall_group.draw(screen)
     player_group.draw(screen)
