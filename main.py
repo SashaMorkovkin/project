@@ -1,6 +1,7 @@
 import pygame
 import sys
 import os
+import math
 
 new_level = 'level2.txt'
 
@@ -101,13 +102,14 @@ class Camera:
 
     def update(self, target):
         self.dx = width // 2 - target.rect.x - target.rect.w // 2
-        self.dy = height // 2 - target.rect.y - - target.rect.h // 2
+        self.dy = height // 2 - target.rect.y - target.rect.h // 2
 
 
 class Tile(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         super().__init__(tile_group, all_sprites)
-        if tile_type == 'wall' or tile_type == 'street' or tile_type == 'left' or tile_type == 'right' or tile_type == 'down':
+        if (tile_type == 'wall' or tile_type == 'street' or tile_type == 'left'
+                or tile_type == 'right' or tile_type == 'down'):
             self.add(wall_group)
         self.image = tile_images[tile_type]
         self.rect = self.image.get_rect()
@@ -118,6 +120,8 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
         super().__init__(all_sprites, player_group)
         self.image = player_image
+        self.x, self.y = pos_x, pos_y
+        self.orig_image = player_image
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
         self.rect.x, self.rect.y = tile_width * pos_x + 13, tile_height * pos_y + 5
@@ -139,6 +143,8 @@ move_ym = False
 move_xm = False
 move_xp = False
 move_yp = False
+crosshair = load_image('crosshair.png')
+pygame.mouse.set_visible(False)
 while run:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -161,6 +167,13 @@ while run:
                 move_xp = False
             if event.key == pygame.K_w:
                 move_ym = False
+        if event.type == pygame.MOUSEMOTION:
+            x, y = pygame.mouse.get_pos()
+            x1, y1 = x - player.rect.x, y - player.rect.y
+            angle = (180 / math.pi) * -math.atan2(y1, x1)
+            player.image = pygame.transform.rotate(player.orig_image, int(angle))
+            player.rect = player.image.get_rect(center=player.rect.center)
+            print(player.rect.center)
     if move_yp:
         player.rect.y += STEP
         if (pygame.sprite.spritecollideany(player, wall_group) or
@@ -186,6 +199,7 @@ while run:
     tile_group.draw(screen)
     wall_group.draw(screen)
     player_group.draw(screen)
+    screen.blit(crosshair, pygame.mouse.get_pos())
     pygame.time.delay(7)
     all_sprites.update()
     pygame.display.flip()
