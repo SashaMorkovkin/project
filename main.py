@@ -136,7 +136,7 @@ class Player(pygame.sprite.Sprite):
 
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y):
-        super().__init__(all_sprites)
+        super().__init__(all_sprites, bullet_group)
         self.pos = (x, y)
         mx, my = pygame.mouse.get_pos()
         self.dir = (mx - x, my - y)
@@ -166,6 +166,7 @@ def terminate():
 all_sprites = pygame.sprite.Group()
 tile_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
+bullet_group = pygame.sprite.Group()
 wall_group = pygame.sprite.Group()
 bullets = []
 cur = load_image('cur.png')
