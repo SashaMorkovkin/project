@@ -12,7 +12,7 @@ size = width, height = 1700, 1000
 clock = pygame.time.Clock()
 pygame.mixer.init()
 pygame.mixer.music.load('fonovaya_musick .wav')
-pygame.mixer.music.play()
+pygame.mixer.music.play(-1)
 sound2 = pygame.mixer.Sound('shoot_sound.wav')
 sound2.set_volume(0.1)
 pygame.mixer.music.set_volume(0.05)
