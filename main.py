@@ -5,7 +5,7 @@ import math
 
 new_level = 'level2.txt'
 
-FPS = 1000
+FPS = 2000
 STEP = 3
 pygame.init()
 size = width, height = 1700, 1000
