@@ -14,7 +14,8 @@ pygame.mixer.init()
 pygame.mixer.music.load('fonovaya_musick .wav')
 pygame.mixer.music.play(-1)
 sound2 = pygame.mixer.Sound('shoot_sound.wav')
-sound2.set_volume(0.1)
+volume = 10
+sound2.set_volume(volume)
 pygame.mixer.music.set_volume(0.05)
 screen = pygame.display.set_mode(size, pygame.FULLSCREEN)
 
@@ -42,27 +43,45 @@ tile_width, tile_height = 50, 50
 
 
 def start_screen():
-    text = ['МАРИО', '', 'Правила игры:', '1. ИГРАТЬ']
     fon = pygame.transform.scale(load_image('fon.jpg'), (width, height))
     screen.blit(fon, (0, 0))
-    font = pygame.font.Font(None, 60)
-    coord_y = 50
-    for line in text:
-        draw_line = font.render(line, 1, 'black', 'white')
-        line_rect = draw_line.get_rect()
-        coord_y += 10
-        line_rect.top = coord_y
-        line_rect.x = width // 2 - line_rect.width // 2
-        coord_y += line_rect.height
-        screen.blit(draw_line, line_rect)
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 terminate()
-            if event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
-                return
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                print(event.pos)
+                if event.pos[0] in range(69, 1135) and event.pos[1] in range(220, 404):
+                    return  #choose_lvl
+                if (66, 465) <= event.pos <= (1140, 640):
+                    settings()
+                if (66, 703) <= event.pos <= (1138, 876):
+                    terminate()
         pygame.display.flip()
-        clock.tick(FPS)
+
+def settings():
+    fon = pygame.transform.scale(load_image('settings.png'), (width, height))
+    screen.blit(fon, (0, 0))
+    global volume
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if (90, 37) <= event.pos <= (200, 125):
+                    return start_screen()
+                if (520, 330) <= event.pos <= (610, 410):
+                    volume += 0.1
+                    sound2.set_volume(volume)
+                if (700, 320) <= event.pos <= (700, 320):
+                    volume -= 0.1
+                    sound2.set_volume(volume)
+        pygame.display.flip()
+
+
+
+def choose_lvl():
+    pass
 
 
 def load_level(file):
