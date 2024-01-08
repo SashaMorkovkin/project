@@ -7,16 +7,15 @@ new_level = 'level2.txt'
 
 FPS = 2000
 STEP = 3
+VOLUME = 0.15
 pygame.init()
-size = width, height = 1700, 1000
+size = width, height = 1700, 1100
 clock = pygame.time.Clock()
 pygame.mixer.init()
 pygame.mixer.music.load('fonovaya_musick .wav')
 pygame.mixer.music.play(-1)
 sound2 = pygame.mixer.Sound('shoot_sound.wav')
-volume = 10
-sound2.set_volume(volume)
-pygame.mixer.music.set_volume(0.05)
+pygame.mixer.music.set_volume(VOLUME)
 screen = pygame.display.set_mode(size, pygame.FULLSCREEN)
 
 
@@ -51,33 +50,37 @@ def start_screen():
                 terminate()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 print(event.pos)
-                if event.pos[0] in range(69, 1135) and event.pos[1] in range(220, 404):
-                    return  #choose_lvl
-                if (66, 465) <= event.pos <= (1140, 640):
+                if event.pos[0] in range(66, 1151) and event.pos[1] in range(241, 449):
+                    print('start')
+                    return
+                if event.pos[0] in range(66, 1151) and event.pos[1] in range(505, 711):
                     settings()
-                if (66, 703) <= event.pos <= (1138, 876):
+                    return
+                if event.pos[0] in range(60, 1151) and event.pos[1] in range(761, 969):
                     terminate()
         pygame.display.flip()
+        clock.tick(FPS)
+
 
 def settings():
     fon = pygame.transform.scale(load_image('settings.png'), (width, height))
     screen.blit(fon, (0, 0))
-    global volume
+    global VOLUME
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 terminate()
             if event.type == pygame.MOUSEBUTTONDOWN:
-                if (90, 37) <= event.pos <= (200, 125):
+                print(event.pos)
+                if event.pos[0] in range(64, 135) and event.pos[1] in range(36, 136):
                     return start_screen()
-                if (520, 330) <= event.pos <= (610, 410):
-                    volume += 0.1
-                    sound2.set_volume(volume)
-                if (700, 320) <= event.pos <= (700, 320):
-                    volume -= 0.1
-                    sound2.set_volume(volume)
+                if event.pos[0] in range(341, 405) and event.pos[1] in range(349, 438):
+                    VOLUME += 0.005
+                    pygame.mixer.music.set_volume(VOLUME)
+                if event.pos[0] in range(464, 526) and event.pos[1] in range(347, 437) and VOLUME >= 0.01:
+                    VOLUME -= 0.005
+                    pygame.mixer.music.set_volume(VOLUME)
         pygame.display.flip()
-
 
 
 def choose_lvl():
@@ -187,6 +190,7 @@ tile_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 bullet_group = pygame.sprite.Group()
 wall_group = pygame.sprite.Group()
+pygame.display.set_icon(load_image("icon.png"))
 bullets = []
 cur = load_image('cur.png')
 start_screen()
