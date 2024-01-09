@@ -35,7 +35,7 @@ def load_image(name, colorkey=None):
     return image
 
 
-tile_images = {'wall': load_image('floor_1.png'), 'empty': load_image('wall_1.png'), 'street': load_image('street.png'),
+tile_images = {'wall': load_image('wall_1.png'), 'empty': load_image('floor_1.png'), 'street': load_image('street.png'),
                'left': load_image('left.png'), 'right': load_image('right.png'), 'down': load_image('down.png')}
 player_image = load_image('main_hero_1.png')
 tile_width, tile_height = 50, 50
@@ -49,7 +49,6 @@ def start_screen():
             if event.type == pygame.QUIT:
                 terminate()
             if event.type == pygame.MOUSEBUTTONDOWN:
-                print(event.pos)
                 if event.pos[0] in range(66, 1151) and event.pos[1] in range(241, 449):
                     print('start')
                     return
@@ -127,7 +126,10 @@ class Camera:
         self.dy = 0
 
     def apply(self, object):
-        object.rect = object.rect.move(self.dx, self.dy)
+        if object.__class__.__name__ == 'Bullet':
+            object.pos = (object.pos[0] + self.dx, object.pos[1] + self.dy)
+        else:
+            object.rect = object.rect.move(self.dx, self.dy)
 
     def update(self, target):
         self.dx = width // 2 - target.rect.x - target.rect.w // 2
@@ -137,8 +139,7 @@ class Camera:
 class Tile(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         super().__init__(tile_group, all_sprites)
-        if (tile_type == 'wall' or tile_type == 'street' or tile_type == 'left'
-                or tile_type == 'right' or tile_type == 'down'):
+        if tile_type == 'wall':
             self.add(wall_group)
         self.image = tile_images[tile_type]
         self.rect = self.image.get_rect()
@@ -165,20 +166,18 @@ class Bullet(pygame.sprite.Sprite):
         length = math.hypot(*self.dir)
         self.dir = (self.dir[0] / length, self.dir[1] / length)
         angle = math.degrees(math.atan2(-self.dir[1], self.dir[0]))
-        self.bullet = load_image('bullet.png')
-        self.rect = self.bullet.get_rect()
-        self.bullet = pygame.transform.rotate(self.bullet, angle)
+        self.image = load_image('bullet.png')
+        self.rect = self.image.get_rect(center=self.pos)
+        self.mask = pygame.mask.from_surface(self.image)
+        self.image = pygame.transform.rotate(self.image, angle)
         self.speed = 4
 
     def update(self):
+        if pygame.sprite.spritecollideany(self, wall_group):
+                self.kill()
         self.pos = (self.pos[0] + self.dir[0] * self.speed,
                     self.pos[1] + self.dir[1] * self.speed)
-        if pygame.sprite.spritecollideany(self, wall_group):
-            self.kill()
-
-    def draw(self, surf):
-        bullet_rect = self.bullet.get_rect(center=self.pos)
-        surf.blit(self.bullet, bullet_rect)
+        self.rect = self.image.get_rect(center=self.pos)
 
 
 def terminate():
@@ -190,8 +189,6 @@ tile_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 bullet_group = pygame.sprite.Group()
 wall_group = pygame.sprite.Group()
-pygame.display.set_icon(load_image("icon.png"))
-bullets = []
 cur = load_image('cur.png')
 start_screen()
 run = True
@@ -206,7 +203,7 @@ while run:
         if event.type == pygame.QUIT:
             run = False
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            bullets.append(Bullet(player.rect.x + 7, player.rect.y + 20))
+            Bullet(player.rect.center[0], player.rect.center[1])
             sound2.play()
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_s:
@@ -250,22 +247,16 @@ while run:
         player.rect.x -= STEP
         if pygame.sprite.spritecollideany(player, wall_group) or player.rect.x < 0:
             player.rect.x += STEP
-    for bullet in bullets[:]:
-        bullet.update()
-        if not screen.get_rect().collidepoint(bullet.pos):
-            bullets.remove(bullet)
     camera.update(player)
     for sprite in all_sprites:
         camera.apply(sprite)
-    all_sprites.draw(screen)
-    wall_group.draw(screen)
+    bullet_group.update()
     tile_group.draw(screen)
     wall_group.draw(screen)
     player_group.draw(screen)
+    bullet_group.draw(screen)
     cur_rect = cur.get_rect()
     cur_rect.center = pygame.mouse.get_pos()
-    for bullet in bullets:
-        bullet.draw(screen)
     screen.blit(cur, cur_rect)
     pygame.time.delay(7)
     all_sprites.update()
