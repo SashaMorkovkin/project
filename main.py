@@ -158,20 +158,25 @@ class Enemy(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         super().__init__(enemy_group, all_sprites)
         self.image = tile_images[tile_type]
+        self.orig_image = tile_images[tile_type]
         self.rect = self.image.get_rect()
         self.rect.x, self.rect.y = tile_width * pos_x, tile_height * pos_y
+        self.reload = 0
 
     def update(self):
         if player.rect.x in range(self.rect.x - 300, self.rect.x + 300) and \
                 player.rect.y in range(self.rect.y - 300, self.rect.y + 300):
             x, y = player.rect.center[0], player.rect.center[1]
-            self.orig_image = self.image
             x1, y1 = x - self.rect.x, y - self.rect.y
             angle = (180 / math.pi) * -math.atan2(y1, x1)
             self.image = pygame.transform.rotate(self.orig_image, int(angle))
             self.rect = self.image.get_rect(center=self.rect.center)
-            Bullet(self.rect.x, self.rect.y, player.rect.center[0],
-                   player.rect.center[1])
+            self.reload += clock.get_time()
+            if self.reload > 150:
+                Bullet(self.rect.center[0], self.rect.center[1], player.rect.center[0],
+                   player.rect.center[1], False)
+                shoot_sound.play()
+                self.reload = 0
 
 
 class Player(pygame.sprite.Sprite):
@@ -186,7 +191,14 @@ class Player(pygame.sprite.Sprite):
         self.rect.x, self.rect.y = tile_width * pos_x + 13, tile_height * pos_y + 5
 
     def update(self):
-        if pygame.sprite.spritecollideany(self, bullet_group):
+        x, y = pygame.mouse.get_pos()
+        x1, y1 = x - self.rect.x, y - self.rect.y
+        angle = (180 / math.pi) * -math.atan2(y1, x1)
+        self.image = pygame.transform.rotate(self.orig_image, int(angle))
+        self.rect = self.image.get_rect(center=self.rect.center)
+        if (pygame.sprite.spritecollideany(self, bullet_group) and
+                not pygame.spritae.spritecollideany(self, bullet_group).player_bullet):
+            pygame.sprite.spritecollideany(self, bullet_group).kill()
             self.hp -= BULLET_DAMAGE
             if self.hp == 0:
                 print('game_over')
@@ -194,7 +206,7 @@ class Player(pygame.sprite.Sprite):
 
 
 class Bullet(pygame.sprite.Sprite):
-    def __init__(self, x, y, mx, my):
+    def __init__(self, x, y, mx, my, player_bullet):
         super().__init__(all_sprites, bullet_group)
         self.pos = (x, y)
         self.dir = (mx - x, my - y)
@@ -205,6 +217,7 @@ class Bullet(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center=self.pos)
         self.mask = pygame.mask.from_surface(self.image)
         self.image = pygame.transform.rotate(self.image, angle)
+        self.player_bullet = player_bullet
 
     def update(self):
         if pygame.sprite.spritecollideany(self, wall_group):
@@ -239,7 +252,7 @@ while run:
             run = False
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             Bullet(player.rect.center[0] + 6, player.rect.center[1] + 6, pygame.mouse.get_pos()[0],
-                   pygame.mouse.get_pos()[1])
+                   pygame.mouse.get_pos()[1],True)
             shoot_sound.play()
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_s:
@@ -259,12 +272,6 @@ while run:
                 move_xp = False
             if event.key == pygame.K_w:
                 move_ym = False
-        if event.type == pygame.MOUSEMOTION:
-            x, y = pygame.mouse.get_pos()
-            x1, y1 = x - player.rect.x, y - player.rect.y
-            angle = (180 / math.pi) * -math.atan2(y1, x1)
-            player.image = pygame.transform.rotate(player.orig_image, int(angle))
-            player.rect = player.image.get_rect(center=player.rect.center)
     if move_yp:
         player.rect.y += STEP
         if (pygame.sprite.spritecollideany(player, wall_group) or
