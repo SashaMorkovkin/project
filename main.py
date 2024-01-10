@@ -8,13 +8,15 @@ new_level = 'level2.txt'
 FPS = 2000
 STEP = 3
 VOLUME = 0.15
+BULLET_DAMAGE = 3
+BULLET_SPEED = 3
 pygame.init()
 size = width, height = 1700, 1100
 clock = pygame.time.Clock()
 pygame.mixer.init()
 pygame.mixer.music.load('fonovaya_musick .wav')
 pygame.mixer.music.play(-1)
-sound2 = pygame.mixer.Sound('shoot_sound.wav')
+shoot_sound = pygame.mixer.Sound('shoot_sound.wav')
 pygame.mixer.music.set_volume(VOLUME)
 screen = pygame.display.set_mode(size, pygame.FULLSCREEN)
 
@@ -36,7 +38,8 @@ def load_image(name, colorkey=None):
 
 
 tile_images = {'wall': load_image('wall_1.png'), 'empty': load_image('floor_1.png'), 'street': load_image('street.png'),
-               'left': load_image('left.png'), 'right': load_image('right.png'), 'down': load_image('down.png')}
+               'left': load_image('left.png'), 'right': load_image('right.png'), 'down': load_image('down.png'),
+               'enemy': load_image('enemy_2.png')}
 player_image = load_image('main_hero_1.png')
 tile_width, tile_height = 50, 50
 
@@ -114,6 +117,11 @@ def generate_level(level):
                 Tile('left', x, y)
             elif level[y][x] == '+':
                 Tile('down', x, y)
+            elif level[y][x] == '+':
+                Tile('empty', x, y)
+            elif level[y][x] == '!':
+                Tile('empty', x, y)
+                Enemy('enemy', x, y)
             else:
                 Tile('empty', x, y)
                 new_player = Player(x, y)
@@ -146,22 +154,49 @@ class Tile(pygame.sprite.Sprite):
         self.rect.x, self.rect.y = tile_width * pos_x, tile_height * pos_y
 
 
+class Enemy(pygame.sprite.Sprite):
+    def __init__(self, tile_type, pos_x, pos_y):
+        super().__init__(enemy_group, all_sprites)
+        self.image = tile_images[tile_type]
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = tile_width * pos_x, tile_height * pos_y
+
+    def update(self):
+        if player.rect.x in range(self.rect.x - 300, self.rect.x + 300) and \
+                player.rect.y in range(self.rect.y - 300, self.rect.y + 300):
+            x, y = player.rect.center[0], player.rect.center[1]
+            self.orig_image = self.image
+            x1, y1 = x - self.rect.x, y - self.rect.y
+            angle = (180 / math.pi) * -math.atan2(y1, x1)
+            self.image = pygame.transform.rotate(self.orig_image, int(angle))
+            self.rect = self.image.get_rect(center=self.rect.center)
+            Bullet(self.rect.x, self.rect.y, player.rect.center[0],
+                   player.rect.center[1])
+
+
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
         super().__init__(all_sprites, player_group)
         self.image = player_image
+        self.hp = 21
         self.x, self.y = pos_x, pos_y
         self.orig_image = player_image
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
         self.rect.x, self.rect.y = tile_width * pos_x + 13, tile_height * pos_y + 5
 
+    def update(self):
+        if pygame.sprite.spritecollideany(self, bullet_group):
+            self.hp -= BULLET_DAMAGE
+            if self.hp == 0:
+                print('game_over')
+                terminate()
+
 
 class Bullet(pygame.sprite.Sprite):
-    def __init__(self, x, y):
+    def __init__(self, x, y, mx, my):
         super().__init__(all_sprites, bullet_group)
         self.pos = (x, y)
-        mx, my = pygame.mouse.get_pos()
         self.dir = (mx - x, my - y)
         length = math.hypot(*self.dir)
         self.dir = (self.dir[0] / length, self.dir[1] / length)
@@ -170,13 +205,12 @@ class Bullet(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center=self.pos)
         self.mask = pygame.mask.from_surface(self.image)
         self.image = pygame.transform.rotate(self.image, angle)
-        self.speed = 4
 
     def update(self):
         if pygame.sprite.spritecollideany(self, wall_group):
-                self.kill()
-        self.pos = (self.pos[0] + self.dir[0] * self.speed,
-                    self.pos[1] + self.dir[1] * self.speed)
+            self.kill()
+        self.pos = (self.pos[0] + self.dir[0] * BULLET_SPEED,
+                    self.pos[1] + self.dir[1] * BULLET_SPEED)
         self.rect = self.image.get_rect(center=self.pos)
 
 
@@ -188,6 +222,7 @@ all_sprites = pygame.sprite.Group()
 tile_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 bullet_group = pygame.sprite.Group()
+enemy_group = pygame.sprite.Group()
 wall_group = pygame.sprite.Group()
 cur = load_image('cur.png')
 start_screen()
@@ -203,8 +238,9 @@ while run:
         if event.type == pygame.QUIT:
             run = False
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            Bullet(player.rect.center[0], player.rect.center[1])
-            sound2.play()
+            Bullet(player.rect.center[0] + 6, player.rect.center[1] + 6, pygame.mouse.get_pos()[0],
+                   pygame.mouse.get_pos()[1])
+            shoot_sound.play()
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_s:
                 move_yp = True
@@ -253,6 +289,7 @@ while run:
     bullet_group.update()
     tile_group.draw(screen)
     wall_group.draw(screen)
+    enemy_group.draw(screen)
     player_group.draw(screen)
     bullet_group.draw(screen)
     cur_rect = cur.get_rect()
