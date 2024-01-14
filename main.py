@@ -11,6 +11,7 @@ STEP = 3
 VOLUME = 0.15
 BULLET_DAMAGE = 3
 BULLET_SPEED = 3
+NOT_FREE = []
 pygame.init()
 size = width, height = 1700, 1100
 clock = pygame.time.Clock()
@@ -98,7 +99,8 @@ def load_level(file):
             map_level = list(map(str.strip, f.readlines()))
         max_width = max(map(len, map_level))
         pygame.mouse.set_visible(False)
-        return list(map(lambda x: x.ljust(max_width, '.'), map_level))
+        level = list(map(lambda x: x.ljust(max_width, '.'), map_level))
+        return level
     except FileNotFoundError:
         terminate()
 
@@ -111,21 +113,29 @@ def generate_level(level):
                 Tile('empty', x, y)
             elif level[y][x] == '#':
                 Tile('wall', x, y)
+                NOT_FREE.append((x, y))
             elif level[y][x] == '-':
                 Tile('street', x, y)
+                NOT_FREE.append((x, y))
             elif level[y][x] == '<':
                 Tile('right', x, y)
+                NOT_FREE.append((x, y))
             elif level[y][x] == '>':
                 Tile('left', x, y)
+                NOT_FREE.append((x, y))
             elif level[y][x] == '+':
                 Tile('down', x, y)
+                NOT_FREE.append((x, y))
             elif level[y][x] == '+':
                 Tile('empty', x, y)
+                NOT_FREE.append((x, y))
             elif level[y][x] == '!':
                 Tile('empty', x, y)
+                NOT_FREE.append((x, y))
                 Enemy('enemy', x, y)
             else:
                 Tile('empty', x, y)
+                NOT_FREE.append((x, y))
                 new_player = Player(x, y)
     return new_player, x, y
 
@@ -174,6 +184,7 @@ class Enemy(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         super().__init__(enemy_group, all_sprites)
         self.image = tile_images[tile_type]
+        self.level = load_level(new_level)
         self.hp = 21
         self.orig_image = tile_images[tile_type]
         self.rect = self.image.get_rect()
@@ -181,8 +192,31 @@ class Enemy(pygame.sprite.Sprite):
         self.reload = 0
 
     def update(self):
+        global level
         if player.rect.x in range(self.rect.x - 300, self.rect.x + 300) and \
                 player.rect.y in range(self.rect.y - 300, self.rect.y + 300):
+            INF = 1000
+            x, y = self.rect.x, self.rect.y
+            distance = [[INF] * len(self.level[0]) for i in range(len(self.level))]
+            distance[y][x] = 0
+            prev = [[None] * len(self.level[0]) for i in range(len(self.level))]
+            queue = [(x, y)]
+            while queue:
+                x, y = queue.pop(0)
+                for dx, dy in (1, 0), (0, 1), (-1, 0), (0, -1):
+                    next_x, next_y = x + dx, y + dy
+                    if 0 <= next_x < len(self.level[0]) and 0 < next_y < len(self.level) and NOT_FREE.count(
+                            (next_x, next_y)) == 0 and \
+                            distance[next_x][next_y] == INF:
+                        distance[next_y][next_x] = distance[y][x] + 1
+                        prev[next_y][next_x] = (x, y)
+                        queue.append((next_x, next_y))
+            x, y = player.rect.x, player.rect.y
+            if distance[y][x] == INF or (self.rect.x, self.rect.y) == (player.rect.x, player.rect.y):
+                return self.rect.x, self.rect.y
+            while prev[y][x] != (self.rect.x, self.rect.y):
+                x, y = prev[y][x]
+            self.rect.x, self.rect.y = x, y
             x, y = player.rect.center[0], player.rect.center[1]
             x1, y1 = x - self.rect.x, y - self.rect.y
             angle = (180 / math.pi) * -math.atan2(y1, x1)
@@ -195,7 +229,7 @@ class Enemy(pygame.sprite.Sprite):
                 self.hp -= BULLET_DAMAGE
                 if self.hp == 0:
                     print('enemy_killed')
-            if self.reload > 170:
+            if self.reload > 100:
                 Bullet(self.rect.center[0], self.rect.center[1], player.rect.center[0],
                        player.rect.center[1], False)
                 shoot_sound.play()
@@ -323,6 +357,7 @@ while run:
     tile_group.draw(screen)
     wall_group.draw(screen)
     enemy_group.draw(screen)
+    enemy_group.update()
     player_group.draw(screen)
     bullet_group.draw(screen)
     cur_rect = cur.get_rect()
