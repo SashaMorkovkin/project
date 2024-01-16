@@ -10,13 +10,16 @@ FPS = 70
 STEP = 3
 VOLUME = 0.15
 BULLET_DAMAGE = 3
+GUN_STORE = 24
 BULLET_SPEED = 3
+reload = 0
 pygame.init()
 size = width, height = 1700, 1100
 clock = pygame.time.Clock()
 pygame.mixer.init()
 pygame.mixer.music.load('fonovaya_musick .wav')
 pygame.mixer.music.play(-1)
+recharge = pygame.mixer.Sound('recharge.wav')
 shoot_sound = pygame.mixer.Sound('shoot_sound.wav')
 damage_sound = pygame.mixer.Sound('damage_sound.wav')
 pygame.mixer.music.set_volume(VOLUME)
@@ -290,6 +293,7 @@ enemy_group = pygame.sprite.Group()
 animation_group = pygame.sprite.Group()
 wall_group = pygame.sprite.Group()
 cur = load_image('cur.png')
+is_reload = True
 start_screen()
 run = True
 player, level_x, level_y = generate_level(load_level(new_level))
@@ -303,9 +307,20 @@ while run:
         if event.type == pygame.QUIT:
             run = False
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            Bullet(player.rect.center[0] + 6, player.rect.center[1] + 6, pygame.mouse.get_pos()[0],
-                   pygame.mouse.get_pos()[1], True)
-            shoot_sound.play()
+            if GUN_STORE > 0:
+                Bullet(player.rect.center[0] + 6, player.rect.center[1] + 6, pygame.mouse.get_pos()[0],
+                       pygame.mouse.get_pos()[1], True)
+                shoot_sound.play()
+                GUN_STORE -= 1
+            else:
+                if is_reload:
+                    recharge.play()
+                    is_reload = False
+                reload += clock.get_time()
+                if reload >= 60:
+                    GUN_STORE = 24
+                    reload = 0
+                    is_reload = True
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 pause()
