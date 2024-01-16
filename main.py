@@ -6,7 +6,7 @@ import time
 
 new_level = 'level2.txt'
 
-FPS = 1000
+FPS = 70
 STEP = 3
 VOLUME = 0.15
 BULLET_DAMAGE = 3
@@ -160,6 +160,29 @@ class Camera:
         self.dy = height // 2 - target.rect.y - target.rect.h // 2
 
 
+class AnimatedSprite(pygame.sprite.Sprite):
+    def __init__(self, sheet, columns, rows, x, y):
+        super().__init__(all_sprites, animation_group)
+        self.frames = []
+        self.cut_sheet(sheet, columns, rows)
+        self.cur_frame = 0
+        self.image = self.frames[self.cur_frame]
+        self.rect = self.rect.move(x, y)
+
+    def cut_sheet(self, sheet, columns, rows):
+        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
+                                sheet.get_height() // rows)
+        for j in range(rows):
+            for i in range(columns):
+                frame_location = (self.rect.w * i, self.rect.h * j)
+                self.frames.append(sheet.subsurface(pygame.Rect(
+                    frame_location, self.rect.size)))
+
+    def update(self):
+        self.cur_frame = (self.cur_frame + 1) % len(self.frames)
+        self.image = self.frames[self.cur_frame]
+
+
 class Tile(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         super().__init__(tile_group, all_sprites)
@@ -175,6 +198,8 @@ class Enemy(pygame.sprite.Sprite):
         super().__init__(enemy_group, all_sprites)
         self.image = tile_images[tile_type]
         self.hp = 21
+        self.pos_x = pos_x
+        self.pos_y = pos_y
         self.orig_image = tile_images[tile_type]
         self.rect = self.image.get_rect()
         self.rect.x, self.rect.y = tile_width * pos_x, tile_height * pos_y
@@ -193,13 +218,15 @@ class Enemy(pygame.sprite.Sprite):
                     pygame.sprite.spritecollideany(self, bullet_group).player_bullet):
                 pygame.sprite.spritecollideany(self, bullet_group).kill()
                 self.hp -= BULLET_DAMAGE
-                if self.hp == 0:
+                if self.hp <= 0:
+                    AnimatedSprite(load_image("animation_enemy.jpg"), 8, 2, self.pos_x, self.pos_y)
+                    self.kill()
                     print('enemy_killed')
-            if self.reload > 170:
-                Bullet(self.rect.center[0], self.rect.center[1], player.rect.center[0],
-                       player.rect.center[1], False)
-                shoot_sound.play()
-                self.reload = 0
+                if self.reload > 170:
+                    Bullet(self.rect.center[0], self.rect.center[1], player.rect.center[0],
+                            player.rect.center[1], False)
+                    shoot_sound.play()
+                    self.reload = 0
 
 
 class Player(pygame.sprite.Sprite):
@@ -260,6 +287,7 @@ tile_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 bullet_group = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()
+animation_group = pygame.sprite.Group()
 wall_group = pygame.sprite.Group()
 cur = load_image('cur.png')
 start_screen()
@@ -325,9 +353,10 @@ while run:
     enemy_group.draw(screen)
     player_group.draw(screen)
     bullet_group.draw(screen)
+    all_sprites.update()
+    animation_group.update()
     cur_rect = cur.get_rect()
     cur_rect.center = pygame.mouse.get_pos()
     screen.blit(cur, cur_rect)
-    pygame.time.delay(7)
-    all_sprites.update()
+    clock.tick(FPS)
     pygame.display.flip()
