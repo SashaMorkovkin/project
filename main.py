@@ -2,7 +2,7 @@ import pygame
 import sys
 import os
 import math
-import time
+import threading
 
 new_level = 'level2.txt'
 
@@ -139,12 +139,10 @@ def pause():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 terminate()
-
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_ESCAPE]:
-            paused = False
-        pygame.display.update()
-        clock.tick(FPS)
+            if event.type == pygame.K_ESCAPE:
+                paused = False
+            pygame.display.update()
+            clock.tick(FPS)
 
 
 class Camera:
@@ -206,7 +204,6 @@ class Enemy(pygame.sprite.Sprite):
         self.orig_image = tile_images[tile_type]
         self.rect = self.image.get_rect()
         self.rect.x, self.rect.y = tile_width * pos_x, tile_height * pos_y
-        self.reload = 0
 
     def update(self):
         if player.rect.x in range(self.rect.x - 300, self.rect.x + 300) and \
@@ -216,20 +213,20 @@ class Enemy(pygame.sprite.Sprite):
             angle = (180 / math.pi) * -math.atan2(y1, x1)
             self.image = pygame.transform.rotate(self.orig_image, int(angle))
             self.rect = self.image.get_rect(center=self.rect.center)
-            self.reload += clock.get_time()
             if (pygame.sprite.spritecollideany(self, bullet_group) and
                     pygame.sprite.spritecollideany(self, bullet_group).player_bullet):
                 pygame.sprite.spritecollideany(self, bullet_group).kill()
                 self.hp -= BULLET_DAMAGE
                 if self.hp <= 0:
                     AnimatedSprite(load_image("animation_enemy.jpg"), 8, 2, self.pos_x, self.pos_y)
-                    self.kill()
                     print('enemy_killed')
-                if self.reload > 170:
-                    Bullet(self.rect.center[0], self.rect.center[1], player.rect.center[0],
-                            player.rect.center[1], False)
-                    shoot_sound.play()
-                    self.reload = 0
+                self.shoot()
+
+    def shoot(self):
+        Bullet(self.rect.center[0], self.rect.center[1], player.rect.center[0],
+               player.rect.center[1], False)
+        shoot_sound.play()
+        threading.Timer(1.0, self.shoot).start()
 
 
 class Player(pygame.sprite.Sprite):
@@ -368,10 +365,10 @@ while run:
     enemy_group.draw(screen)
     player_group.draw(screen)
     bullet_group.draw(screen)
-    all_sprites.update()
-    animation_group.update()
     cur_rect = cur.get_rect()
     cur_rect.center = pygame.mouse.get_pos()
     screen.blit(cur, cur_rect)
     clock.tick(FPS)
+    all_sprites.update()
+    animation_group.update()
     pygame.display.flip()
