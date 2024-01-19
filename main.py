@@ -2,6 +2,7 @@ import pygame
 import sys
 import os
 import math
+import pygame_gui
 import threading
 
 new_level = 'level2.txt'
@@ -14,6 +15,8 @@ GUN_STORE = 24
 BULLET_SPEED = 3
 reload = 0
 pygame.init()
+font = pygame.font.SysFont('Courier New CYR', 40)
+paused_text = font.render('Нажмите SPACE для продолжения игры', True, (255, 255, 255))
 size = width, height = 1700, 1100
 clock = pygame.time.Clock()
 pygame.mixer.init()
@@ -139,10 +142,12 @@ def pause():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 terminate()
-            if event.type == pygame.K_ESCAPE:
-                paused = False
-            pygame.display.update()
-            clock.tick(FPS)
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_SPACE]:
+            paused = False
+        pygame.display.update()
+        screen.blit(paused_text, (800, 200))
+        clock.tick(FPS)
 
 
 class Camera:
@@ -204,6 +209,7 @@ class Enemy(pygame.sprite.Sprite):
         self.orig_image = tile_images[tile_type]
         self.rect = self.image.get_rect()
         self.rect.x, self.rect.y = tile_width * pos_x, tile_height * pos_y
+        self.reload = 0
 
     def update(self):
         if player.rect.x in range(self.rect.x - 300, self.rect.x + 300) and \
@@ -213,6 +219,8 @@ class Enemy(pygame.sprite.Sprite):
             angle = (180 / math.pi) * -math.atan2(y1, x1)
             self.image = pygame.transform.rotate(self.orig_image, int(angle))
             self.rect = self.image.get_rect(center=self.rect.center)
+            self.reload += clock.get_time()
+            print(self.reload)
             if (pygame.sprite.spritecollideany(self, bullet_group) and
                     pygame.sprite.spritecollideany(self, bullet_group).player_bullet):
                 pygame.sprite.spritecollideany(self, bullet_group).kill()
@@ -220,7 +228,12 @@ class Enemy(pygame.sprite.Sprite):
                 if self.hp <= 0:
                     AnimatedSprite(load_image("animation_enemy.jpg"), 8, 2, self.pos_x, self.pos_y)
                     print('enemy_killed')
-                self.shoot()
+                if self.reload >= 170:
+                    Bullet(self.rect.center[0], self.rect.center[1], player.rect.center[0],
+                           player.rect.center[1], False)
+                    self.reload = 0
+                    shoot_sound.play()
+
 
     def shoot(self):
         Bullet(self.rect.center[0], self.rect.center[1], player.rect.center[0],
