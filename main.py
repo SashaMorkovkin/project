@@ -5,7 +5,7 @@ import math
 import pygame_gui
 import threading
 
-new_level = 'level2.txt'
+new_level = 'level3.txt'
 
 FPS = 70
 STEP = 3
