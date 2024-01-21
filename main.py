@@ -11,9 +11,10 @@ FPS = 70
 STEP = 3
 VOLUME = 0.15
 BULLET_DAMAGE = 3
-GUN_STORE = 24
+GUN_STORE = 19
 BULLET_SPEED = 3
 reload = 0
+player_hp = 20
 pygame.init()
 font = pygame.font.SysFont('Courier New CYR', 40)
 paused_text = font.render('Нажмите SPACE для продолжения игры', True, (255, 255, 255))
@@ -220,7 +221,6 @@ class Enemy(pygame.sprite.Sprite):
             self.image = pygame.transform.rotate(self.orig_image, int(angle))
             self.rect = self.image.get_rect(center=self.rect.center)
             self.reload += clock.get_time()
-            print(self.reload)
             if (pygame.sprite.spritecollideany(self, bullet_group) and
                     pygame.sprite.spritecollideany(self, bullet_group).player_bullet):
                 pygame.sprite.spritecollideany(self, bullet_group).kill()
@@ -234,7 +234,6 @@ class Enemy(pygame.sprite.Sprite):
                     self.reload = 0
                     shoot_sound.play()
 
-
     def shoot(self):
         Bullet(self.rect.center[0], self.rect.center[1], player.rect.center[0],
                player.rect.center[1], False)
@@ -246,7 +245,6 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
         super().__init__(all_sprites, player_group)
         self.image = player_image
-        self.hp = 21
         self.x, self.y = pos_x, pos_y
         self.orig_image = player_image
         self.rect = self.image.get_rect()
@@ -254,6 +252,7 @@ class Player(pygame.sprite.Sprite):
         self.rect.x, self.rect.y = tile_width * pos_x + 13, tile_height * pos_y + 5
 
     def update(self):
+        global player_hp
         x, y = pygame.mouse.get_pos()
         x1, y1 = x - self.rect.x, y - self.rect.y
         angle = (180 / math.pi) * -math.atan2(y1, x1)
@@ -262,9 +261,9 @@ class Player(pygame.sprite.Sprite):
         if (pygame.sprite.spritecollideany(self, bullet_group) and
                 not pygame.sprite.spritecollideany(self, bullet_group).player_bullet):
             pygame.sprite.spritecollideany(self, bullet_group).kill()
-            self.hp -= BULLET_DAMAGE
+            player_hp -= BULLET_DAMAGE
             damage_sound.play()
-            if self.hp == 0:
+            if player_hp <= 0:
                 print('game_over')
                 terminate()
 
@@ -303,6 +302,9 @@ enemy_group = pygame.sprite.Group()
 animation_group = pygame.sprite.Group()
 wall_group = pygame.sprite.Group()
 cur = load_image('cur.png')
+gun_image = load_image('gun_image.png')
+hitbar_image = load_image('hitbar.png')
+hitbar_rect = (10, 30)
 is_reload = True
 start_screen()
 run = True
@@ -328,7 +330,7 @@ while run:
                     is_reload = False
                 reload += clock.get_time()
                 if reload >= 60:
-                    GUN_STORE = 24
+                    GUN_STORE = 19
                     reload = 0
                     is_reload = True
         if event.type == pygame.KEYDOWN:
@@ -372,6 +374,7 @@ while run:
     camera.update(player)
     for sprite in all_sprites:
         camera.apply(sprite)
+    patrons = font.render(f'{GUN_STORE}/{19}', True, (255, 255, 255))
     bullet_group.update()
     tile_group.draw(screen)
     wall_group.draw(screen)
@@ -380,6 +383,12 @@ while run:
     bullet_group.draw(screen)
     cur_rect = cur.get_rect()
     cur_rect.center = pygame.mouse.get_pos()
+    screen.blit(hitbar_image, hitbar_rect)
+    screen.blit(gun_image, (30, 880))
+    screen.blit(patrons, (60, 1000))
+    pygame.draw.rect(screen, 'grey', (60, 34, 192, 23))
+    pygame.draw.rect(screen, 'red', (60, 34, 192 * (player_hp / 20), 23))
+    pygame.draw.rect(screen, 'black', (60, 34, 194, 25), 3)
     screen.blit(cur, cur_rect)
     clock.tick(FPS)
     all_sprites.update()
