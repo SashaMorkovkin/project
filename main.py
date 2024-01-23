@@ -5,7 +5,7 @@ import math
 import pygame_gui
 import threading
 
-new_level = 'level1.txt'
+cur_level = 0
 levels = ['level1.txt', 'level2.txt', 'level3.txt', 'level4.txt']
 
 FPS = 70
@@ -27,7 +27,7 @@ animation_group = pygame.sprite.Group()
 wall_group = pygame.sprite.Group()
 portal_group = pygame.sprite.Group()
 hitbar_rect = (10, 30)
-is_reload = True
+is_reload = False
 run = True
 move_ym = False
 move_xm = False
@@ -66,8 +66,10 @@ def load_image(name, colorkey=None):
     return image
 
 
-tile_images = {'wall': load_image('wall_1.png'), 'empty': load_image('floor_1.png'), 'street': load_image('street.png'),
-               'left': load_image('left.png'), 'right': load_image('right.png'), 'down': load_image('down.png'),
+tile_images = {'wall': load_image('wall_1.png'), 'empty': load_image('floor_1.png'),
+               'street': load_image('street.png'),
+               'left': load_image('left.png'),
+               'right': load_image('right.png'), 'down': load_image('down.png'),
                'enemy': load_image('enemy_2.png'), 'portal': load_image('портал.png')}
 player_image = load_image('main_hero_1.png')
 tile_width, tile_height = 50, 50
@@ -121,10 +123,11 @@ def settings():
                 if event.pos[0] in range(73, 153) and event.pos[1] in range(36, 136):
                     return start_screen()
                 if event.pos[0] in range(384, 461) and event.pos[1] in range(350, 441):
-                    VOLUME += 0.05
+                    VOLUME += 0.15
                     pygame.mixer.music.set_volume(VOLUME)
-                if event.pos[0] in range(529, 602) and event.pos[1] in range(347, 437) and VOLUME >= 0.01:
-                    VOLUME -= 0.05
+                if (event.pos[0] in range(529, 602) and event.pos[1]
+                        in range(347, 437) and VOLUME >= 0.01):
+                    VOLUME -= 0.15
                     pygame.mixer.music.set_volume(VOLUME)
         cur_rect = cur.get_rect()
         cur_rect.center = pygame.mouse.get_pos()
@@ -154,7 +157,7 @@ def pause():
 
 
 def death_menu():
-    global DEATH, new_level, player_hp, GUN_STORE
+    global DEATH, cur_level, player_hp, GUN_STORE, player, level_x, level_y, all_sprites
     death = True
     while death:
         for event in pygame.event.get():
@@ -166,7 +169,16 @@ def death_menu():
             death = False
             player_hp = 20
             GUN_STORE = 19
-            new_level = 'level1.txt'
+            cur_level = 0
+            all_sprites.empty()
+            tile_group.empty()
+            player_group.empty()
+            bullet_group.empty()
+            enemy_group.empty()
+            animation_group.empty()
+            wall_group.empty()
+            portal_group.empty()
+            player, level_x, level_y = generate_level(load_level(cur_level))
             DEATH = False
         if keys[pygame.K_2]:
             terminate()
@@ -240,31 +252,26 @@ class Enemy(pygame.sprite.Sprite):
     def update(self):
         if player_group.sprites()[0].rect.x in range(self.rect.x - 300, self.rect.x + 300) and \
                 player_group.sprites()[0].rect.y in range(self.rect.y - 300, self.rect.y + 300):
-            x, y = player_group.sprites()[0].rect.center[0], player_group.sprites()[0].rect.center[1]
+            x, y = (player_group.sprites()[0].rect.center[0],
+                    player_group.sprites()[0].rect.center[1])
             x1, y1 = x - self.rect.x, y - self.rect.y
             angle = (180 / math.pi) * -math.atan2(y1, x1)
             self.image = pygame.transform.rotate(self.orig_image, int(angle))
             self.rect = self.image.get_rect(center=self.rect.center)
             self.reload += clock.get_time()
-            if (pygame.sprite.spritecollideany(self, bullet_group) and
-                    pygame.sprite.spritecollideany(self, bullet_group).player_bullet):
-                pygame.sprite.spritecollideany(self, bullet_group).kill()
-                self.hp -= BULLET_DAMAGE
-                if self.hp <= 0:
-                    self.kill()
-                    AnimatedSprite(load_image("animation_enemy.jpg"), 8, 2, self.pos_x, self.pos_y)
-                    print('enemy_killed')
-                if self.reload >= 170:
-                    Bullet(self.rect.center[0], self.rect.center[1], player_group.sprites()[0].rect.center[0],
-                           player_group.sprites()[0].rect.center[1], False)
-                    self.reload = 0
-                    shoot_sound.play()
-
-    def shoot(self):
-        Bullet(self.rect.center[0], self.rect.center[1], player_group.sprites()[0].rect.center[0],
-               player_group.sprites()[0].rect.center[1], False)
-        shoot_sound.play()
-        threading.Timer(1.0, self.shoot).start()
+            if self.reload >= 770:
+                Bullet(self.rect.center[0], self.rect.center[1], player_group.sprites()[0].rect.center[0],
+                        player_group.sprites()[0].rect.center[1], False)
+                self.reload = 0
+                shoot_sound.play()
+        if (pygame.sprite.spritecollideany(self, bullet_group) and
+                pygame.sprite.spritecollideany(self, bullet_group).player_bullet):
+            pygame.sprite.spritecollideany(self, bullet_group).kill()
+            self.hp -= BULLET_DAMAGE
+            if self.hp <= 0:
+                self.kill()
+                AnimatedSprite(load_image("animation_enemy.jpg"), 8, 2, self.pos_x, self.pos_y)
+                print('enemy_killed')
 
 
 class Player(pygame.sprite.Sprite):
@@ -342,13 +349,14 @@ def generate_level(level):
     return new_player, x, y
 
 
-if not DEATH:
-    player, level_x, level_y = generate_level(load_level(new_level))
+cur_level = 0
+player, level_x, level_y = generate_level(load_level(cur_level))
 camera = Camera()
 
 
 def run_game():
-    global run, GUN_STORE, is_reload, reload, move_yp, move_xp, move_xm, move_ym, new_level, player
+    global run, GUN_STORE, is_reload, reload, move_yp, move_xp, \
+        move_xm, move_ym, player, cur_level
     start_screen()
     while run:
         for event in pygame.event.get():
@@ -360,15 +368,6 @@ def run_game():
                            pygame.mouse.get_pos()[1], True)
                     shoot_sound.play()
                     GUN_STORE -= 1
-                else:
-                    if is_reload:
-                        recharge.play()
-                        is_reload = False
-                    reload += clock.get_time()
-                    if reload >= 60:
-                        GUN_STORE = 19
-                        reload = 0
-                        is_reload = True
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     pause()
@@ -380,6 +379,10 @@ def run_game():
                     move_xp = True
                 if event.key == pygame.K_w:
                     move_ym = True
+                if event.key == pygame.K_r:
+                    if reload == 0:
+                        recharge.play()
+                        is_reload = True
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_s:
                     move_yp = False
@@ -412,10 +415,24 @@ def run_game():
             camera.apply(sprite)
         patrons = font.render(f'{GUN_STORE}/{19}', True, (255, 255, 255))
         if len(enemy_group.sprites()) == 0:
-            new_level = 'level2.txt'
-            player, level_x, level_y = generate_level(load_level(new_level))
-            run = False
+            cur_level = (cur_level + 1) % len(levels)
+            GUN_STORE = 19
+            all_sprites.empty()
+            tile_group.empty()
+            player_group.empty()
+            bullet_group.empty()
+            enemy_group.empty()
+            animation_group.empty()
+            wall_group.empty()
+            portal_group.empty()
+            player, level_x, level_y = generate_level(load_level(levels[cur_level]))
             run_game()
+        if is_reload:
+            reload += clock.get_time()
+        if reload >= 700:
+            GUN_STORE = 19
+            reload = 0
+            is_reload = False
         bullet_group.update()
         tile_group.draw(screen)
         player_group.draw(screen)
