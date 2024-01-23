@@ -2,11 +2,9 @@ import pygame
 import sys
 import os
 import math
-import pygame_gui
-import threading
 
 cur_level = 0
-levels = ['level1.txt', 'level2.txt', 'level3.txt', 'level4.txt']
+levels = ['level1.txt', 'level2.txt', 'level3.txt', 'level4.txt', 'level5.txt']
 
 FPS = 70
 STEP = 3
@@ -23,7 +21,6 @@ tile_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 bullet_group = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()
-animation_group = pygame.sprite.Group()
 wall_group = pygame.sprite.Group()
 portal_group = pygame.sprite.Group()
 hitbar_rect = (10, 30)
@@ -70,7 +67,7 @@ tile_images = {'wall': load_image('wall_1.png'), 'empty': load_image('floor_1.pn
                'street': load_image('street.png'),
                'left': load_image('left.png'),
                'right': load_image('right.png'), 'down': load_image('down.png'),
-               'enemy': load_image('enemy_2.png'), 'portal': load_image('портал.png')}
+               'enemy': load_image('enemy_2.png'), 'portal': load_image('портал.png'), 'boss': load_image('boss.png')}
 player_image = load_image('main_hero_1.png')
 tile_width, tile_height = 50, 50
 cur = load_image('cur.png')
@@ -157,7 +154,8 @@ def pause():
 
 
 def death_menu():
-    global DEATH, cur_level, player_hp, GUN_STORE, player, level_x, level_y, all_sprites
+    global DEATH, cur_level, player_hp, GUN_STORE, player, level_x, level_y, all_sprites, move_yp, move_xp, move_xm, \
+        move_ym
     death = True
     while death:
         for event in pygame.event.get():
@@ -175,10 +173,11 @@ def death_menu():
             player_group.empty()
             bullet_group.empty()
             enemy_group.empty()
-            animation_group.empty()
             wall_group.empty()
             portal_group.empty()
-            player, level_x, level_y = generate_level(load_level(cur_level))
+            move_yp, move_xp, move_xm, move_ym = False, False, False, False
+            cur_level = 0
+            player, level_x, level_y = generate_level(load_level(levels[cur_level]))
             DEATH = False
         if keys[pygame.K_2]:
             terminate()
@@ -204,29 +203,6 @@ class Camera:
         self.dy = height // 2 - target.rect.y - target.rect.h // 2
 
 
-class AnimatedSprite(pygame.sprite.Sprite):
-    def __init__(self, sheet, columns, rows, x, y):
-        super().__init__(all_sprites, animation_group)
-        self.frames = []
-        self.cut_sheet(sheet, columns, rows)
-        self.cur_frame = 0
-        self.image = self.frames[self.cur_frame]
-        self.rect = self.rect.move(x, y)
-
-    def cut_sheet(self, sheet, columns, rows):
-        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
-                                sheet.get_height() // rows)
-        for j in range(rows):
-            for i in range(columns):
-                frame_location = (self.rect.w * i, self.rect.h * j)
-                self.frames.append(sheet.subsurface(pygame.Rect(
-                    frame_location, self.rect.size)))
-
-    def update(self):
-        self.cur_frame = (self.cur_frame + 1) % len(self.frames)
-        self.image = self.frames[self.cur_frame]
-
-
 class Tile(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         super().__init__(tile_group, all_sprites)
@@ -250,8 +226,8 @@ class Enemy(pygame.sprite.Sprite):
         self.reload = 0
 
     def update(self):
-        if player_group.sprites()[0].rect.x in range(self.rect.x - 300, self.rect.x + 300) and \
-                player_group.sprites()[0].rect.y in range(self.rect.y - 300, self.rect.y + 300):
+        if player_group.sprites()[0].rect.x in range(self.rect.x - 350, self.rect.x + 350) and \
+                player_group.sprites()[0].rect.y in range(self.rect.y - 350, self.rect.y + 350):
             x, y = (player_group.sprites()[0].rect.center[0],
                     player_group.sprites()[0].rect.center[1])
             x1, y1 = x - self.rect.x, y - self.rect.y
@@ -261,7 +237,7 @@ class Enemy(pygame.sprite.Sprite):
             self.reload += clock.get_time()
             if self.reload >= 770:
                 Bullet(self.rect.center[0], self.rect.center[1], player_group.sprites()[0].rect.center[0],
-                        player_group.sprites()[0].rect.center[1], False)
+                       player_group.sprites()[0].rect.center[1], False)
                 self.reload = 0
                 shoot_sound.play()
         if (pygame.sprite.spritecollideany(self, bullet_group) and
@@ -270,8 +246,6 @@ class Enemy(pygame.sprite.Sprite):
             self.hp -= BULLET_DAMAGE
             if self.hp <= 0:
                 self.kill()
-                AnimatedSprite(load_image("animation_enemy.jpg"), 8, 2, self.pos_x, self.pos_y)
-                print('enemy_killed')
 
 
 class Player(pygame.sprite.Sprite):
@@ -332,14 +306,6 @@ def generate_level(level):
                 Tile('wall', x, y)
             elif level[y][x] == '-':
                 Tile('street', x, y)
-            elif level[y][x] == '<':
-                Tile('right', x, y)
-            elif level[y][x] == '>':
-                Tile('left', x, y)
-            elif level[y][x] == '+':
-                Tile('down', x, y)
-            elif level[y][x] == '+':
-                Tile('empty', x, y)
             elif level[y][x] == '!':
                 Tile('empty', x, y)
                 Enemy('enemy', x, y)
@@ -350,14 +316,13 @@ def generate_level(level):
 
 
 cur_level = 0
-player, level_x, level_y = generate_level(load_level(cur_level))
+player, level_x, level_y = generate_level(load_level(levels[cur_level]))
 camera = Camera()
 
 
 def run_game():
     global run, GUN_STORE, is_reload, reload, move_yp, move_xp, \
         move_xm, move_ym, player, cur_level
-    start_screen()
     while run:
         for event in pygame.event.get():
             if event.type == pygame.QUIT or DEATH:
@@ -422,9 +387,9 @@ def run_game():
             player_group.empty()
             bullet_group.empty()
             enemy_group.empty()
-            animation_group.empty()
             wall_group.empty()
             portal_group.empty()
+            move_yp, move_xp, move_xm, move_ym = False, False, False, False
             player, level_x, level_y = generate_level(load_level(levels[cur_level]))
             run_game()
         if is_reload:
@@ -451,8 +416,8 @@ def run_game():
         clock.tick(FPS)
         portal_group.update()
         all_sprites.update()
-        animation_group.update()
         pygame.display.flip()
 
 
+start_screen()
 run_game()
