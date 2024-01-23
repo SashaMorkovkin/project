@@ -69,9 +69,7 @@ def load_image(name, colorkey=None):
 
 tile_images = {'wall': load_image('wall_1.png'), 'empty': load_image('floor_1.png'),
                'street': load_image('street.png'),
-               'left': load_image('left.png'),
-               'right': load_image('right.png'), 'down': load_image('down.png'),
-               'enemy': load_image('enemy_2.png'), 'portal': load_image('портал.png'), 'boss': load_image('boss.png'),
+               'enemy': load_image('enemy_2.png'),
                'HEAL': load_image('HEAL.png')}
 player_image = load_image('main_hero_1.png')
 tile_width, tile_height = 50, 50
