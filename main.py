@@ -3,6 +3,8 @@ import sys
 import os
 import math
 
+import pygame_gui
+
 cur_level = 0
 levels = ['level1.txt', 'level2.txt', 'level3.txt', 'level4.txt', 'level5.txt']
 
@@ -40,6 +42,7 @@ paused_text = font.render('Нажмите SPACE для продолжения и
 death_text = font.render('Нажмите 1 для перезапуска игры\n\n   Нажмите 2 для выхода'
                          ' из игры', True, (255, 255, 255))
 size = width, height = 1940, 1100
+manager = pygame_gui.UIManager(size)
 clock = pygame.time.Clock()
 pygame.mixer.init()
 pygame.mixer.music.load('fonovaya_musick .wav')
@@ -93,11 +96,33 @@ def load_level(file):
 
 
 def start_screen():
-    fon = pygame.transform.scale(load_image('fon.jpg'), (width, height))
+    global manager
+    pygame.display.update()
+    start_button = pygame_gui.elements.UIButton(
+        relative_rect=pygame.Rect((66, 241), (1308, 200)), text='НАЧАТЬ ИГРУ', manager=manager
+    )
+    settings_button = pygame_gui.elements.UIButton(
+        relative_rect=pygame.Rect((66, 505), (1308, 200)), text='НАСТРОЙКИ', manager=manager
+    )
+    end_button = pygame_gui.elements.UIButton(
+        relative_rect=pygame.Rect((66, 761), (1308, 200)), text='ВЫЙТИ', manager=manager
+    )
+    fon = pygame.transform.scale(load_image('fon1.png'), (width, height))
     while True:
+        time_delta = clock.tick(60) / 1000
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 terminate()
+            if event.type == pygame.USEREVENT:
+                if event.user_type == pygame_gui.UI_BUTTON_PRESSED:
+                    if event.ui_element == start_button:
+                        return
+                    if event.ui_element == settings_button:
+                        with settings():
+                            return
+                    if event.ui_element == end_button:
+                        terminate()
+            """
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.pos[0] in range(66, 1308) and event.pos[1] in range(241, 449):
                     return
@@ -106,9 +131,13 @@ def start_screen():
                     return
                 if event.pos[0] in range(60, 1308) and event.pos[1] in range(761, 969):
                     terminate()
+            """
+            manager.process_events(event)
+        manager.update(time_delta)
         cur_rect = cur.get_rect()
         cur_rect.center = pygame.mouse.get_pos()
         screen.blit(fon, (0, 0))
+        manager.draw_ui(screen)
         screen.blit(cur, cur_rect)
         clock.tick(FPS)
         pygame.display.flip()
@@ -123,7 +152,8 @@ def settings():
                 terminate()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.pos[0] in range(73, 153) and event.pos[1] in range(36, 136):
-                    return start_screen()
+                    with start_screen():
+                        return
                 if event.pos[0] in range(384, 461) and event.pos[1] in range(350, 441):
                     VOLUME += 0.15
                     pygame.mixer.music.set_volume(VOLUME)
