@@ -226,8 +226,8 @@ class Enemy(pygame.sprite.Sprite):
         self.reload = 0
 
     def update(self):
-        if player_group.sprites()[0].rect.x in range(self.rect.x - 350, self.rect.x + 350) and \
-                player_group.sprites()[0].rect.y in range(self.rect.y - 350, self.rect.y + 350):
+        if player_group.sprites()[0].rect.x in range(self.rect.x - 450, self.rect.x + 450) and \
+                player_group.sprites()[0].rect.y in range(self.rect.y - 450, self.rect.y + 450):
             x, y = (player_group.sprites()[0].rect.center[0],
                     player_group.sprites()[0].rect.center[1])
             x1, y1 = x - self.rect.x, y - self.rect.y
