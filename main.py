@@ -3,9 +3,9 @@ import sys
 import os
 import math
 
+# необходимые переменные, вызовы функций
 cur_level = 0
 levels = ['level1.txt', 'level2.txt', 'level3.txt', 'level4.txt', 'level5.txt']
-
 FPS = 70
 STEP = 3
 VOLUME = 0.15
@@ -34,7 +34,7 @@ move_ym = False
 move_xm = False
 move_xp = False
 move_yp = False
-font = pygame.font.SysFont('Courier New CYR', 40)
+font = pygame.font.SysFont('serif', 40)
 paused_text = font.render('Нажмите SPACE для продолжения игры\n\n   Нажмите CAPS для выхода'
                           ' из игры', True, (255, 255, 255))
 death_text = font.render('Нажмите 1 для перезапуска игры\n\n   Нажмите 2 для выхода'
@@ -42,7 +42,8 @@ death_text = font.render('Нажмите 1 для перезапуска игр�
 size = width, height = 1940, 1100
 clock = pygame.time.Clock()
 pygame.mixer.init()
-pygame.mixer.music.load('fonovaya_musick .wav')
+nameofmusic = input('Выберите музыку: Voyager/Cyberpunk?\nВведите 1 или 2\n')
+pygame.mixer.music.load('cyberpunk.wav' if nameofmusic == '1' else 'voyager.wav')
 pygame.mixer.music.play(-1)
 recharge = pygame.mixer.Sound('recharge.wav')
 shoot_sound = pygame.mixer.Sound('shoot_sound.wav')
@@ -51,6 +52,7 @@ pygame.mixer.music.set_volume(VOLUME)
 screen = pygame.display.set_mode(size, pygame.FULLSCREEN)
 
 
+# загрузка картинок
 def load_image(name, colorkey=None):
     fullname = os.path.join('data', name)
     if not os.path.isfile(fullname):
@@ -67,12 +69,12 @@ def load_image(name, colorkey=None):
     return image
 
 
+# загрузка спрайтов
 tile_images = {'wall': load_image('wall_2.png'),
-                                   'empty': load_image('floor_1.png'),
-                                   'street': load_image('street.png'),
-                                   'enemy': load_image('enemy_1.png'),
-                                   'HEAL': load_image('HEAL.png')
-               }
+               'empty': load_image('floor_1.png'),
+               'street': load_image('street.png'),
+               'enemy': load_image('enemy_1.png'),
+               'HEAL': load_image('HEAL.png')}
 player_image = load_image('main_hero_1.png')
 tile_width, tile_height = 50, 50
 cur = load_image('cur.png')
@@ -80,6 +82,7 @@ gun_image = load_image('gun_image.png')
 hitbar_image = load_image('hitbar.png')
 
 
+# загрузка уровня из txt-файла
 def load_level(file):
     try:
         file = f'data/{file}'
@@ -92,6 +95,7 @@ def load_level(file):
         terminate()
 
 
+# начальный экран
 def start_screen():
     fon = pygame.transform.scale(load_image('fon.jpg'), (width, height))
     while True:
@@ -99,13 +103,14 @@ def start_screen():
             if event.type == pygame.QUIT:
                 terminate()
             if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.pos[0] in range(66, 1308) and event.pos[1] in range(241, 449):
+                # расчёт координат кнопки
+                if event.pos[0] in range(66, 1308) and event.pos[1] in range(241, 449):  # старт
                     choose_style()
                     return
-                if event.pos[0] in range(66, 1308) and event.pos[1] in range(505, 711):
+                if event.pos[0] in range(66, 1308) and event.pos[1] in range(505, 711):  # настройки
                     settings()
                     return
-                if event.pos[0] in range(60, 1308) and event.pos[1] in range(761, 969):
+                if event.pos[0] in range(66, 1308) and event.pos[1] in range(761, 969):  # выход
                     terminate()
         cur_rect = cur.get_rect()
         cur_rect.center = pygame.mouse.get_pos()
@@ -114,6 +119,8 @@ def start_screen():
         clock.tick(FPS)
         pygame.display.flip()
 
+
+# меню выбора стиля
 def choose_style():
     global tile_images, player_image
     fon = pygame.transform.scale(load_image('choose_style.png'), (width, height))
@@ -154,6 +161,7 @@ def choose_style():
         pygame.display.flip()
 
 
+# настройки
 def settings():
     fon = pygame.transform.scale(load_image('settings.png'), (width, height))
     global VOLUME
@@ -163,12 +171,12 @@ def settings():
                 terminate()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.pos[0] in range(73, 153) and event.pos[1] in range(36, 136):
-                    return start_screen()
-                if event.pos[0] in range(384, 461) and event.pos[1] in range(350, 441):
+                    return start_screen()  # выход из настроек
+                if event.pos[0] in range(384, 461) and event.pos[1] in range(350, 441):  # +
                     VOLUME += 0.15
                     pygame.mixer.music.set_volume(VOLUME)
                 if (event.pos[0] in range(529, 602) and event.pos[1]
-                        in range(347, 437) and VOLUME >= 0.01):
+                        in range(347, 437) and VOLUME >= 0.01):  # -
                     VOLUME -= 0.15
                     pygame.mixer.music.set_volume(VOLUME)
         cur_rect = cur.get_rect()
@@ -181,8 +189,11 @@ def settings():
 def terminate():
     sys.exit()
 
+
 start_screen()
 
+
+# пауза игры
 def pause():
     paused = True
     while paused:
@@ -199,6 +210,7 @@ def pause():
         clock.tick(FPS)
 
 
+# экран завершения игры
 def death_menu():
     global DEATH, cur_level, player_hp, GUN_STORE, player, level_x, level_y, all_sprites, move_yp, move_xp, move_xm, \
         move_ym, HEAL_VISIBLE
@@ -234,6 +246,7 @@ def death_menu():
     run_game()
 
 
+# камера
 class Camera:
     def __init__(self):
         self.dx = 0
@@ -250,6 +263,7 @@ class Camera:
         self.dy = height // 2 - target.rect.y - target.rect.h // 2
 
 
+# стены/пол
 class Tile(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         super().__init__(tile_group, all_sprites)
@@ -260,6 +274,7 @@ class Tile(pygame.sprite.Sprite):
         self.rect.x, self.rect.y = tile_width * pos_x, tile_height * pos_y
 
 
+# хилл
 class HEAL(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         super().__init__(heal_group, all_sprites)
@@ -274,6 +289,7 @@ class HEAL(pygame.sprite.Sprite):
             self.kill()
 
 
+# враг
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         super().__init__(enemy_group, all_sprites)
@@ -298,7 +314,8 @@ class Enemy(pygame.sprite.Sprite):
             self.rect = self.image.get_rect(center=self.rect.center)
             self.reload += clock.get_time()
             if self.reload >= 770:
-                Bullet(self.rect.center[0], self.rect.center[1], player_group.sprites()[0].rect.center[0],
+                Bullet(self.rect.center[0], self.rect.center[1],
+                       player_group.sprites()[0].rect.center[0],
                        player_group.sprites()[0].rect.center[1], False)
                 self.reload = 0
                 shoot_sound.play()
@@ -312,6 +329,7 @@ class Enemy(pygame.sprite.Sprite):
                 self.kill()
 
 
+# главный герой
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
         super().__init__(all_sprites, player_group)
@@ -338,6 +356,7 @@ class Player(pygame.sprite.Sprite):
                 death_menu()
 
 
+# пуля
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y, mx, my, player_bullet):
         super().__init__(all_sprites, bullet_group)
@@ -359,6 +378,8 @@ class Bullet(pygame.sprite.Sprite):
                     self.pos[1] + self.dir[1] * BULLET_SPEED)
         self.rect = self.image.get_rect(center=self.pos)
 
+
+# загрузка текстур
 def generate_level(level):
     global heal_x, heal_y
     new_player, x, y = None, None, None
@@ -390,6 +411,7 @@ player, level_x, level_y = generate_level(load_level(levels[cur_level]))
 camera = Camera()
 
 
+# основной игровой цикл
 def run_game():
     global run, GUN_STORE, is_reload, reload, move_yp, move_xp, \
         move_xm, move_ym, player, cur_level
@@ -399,7 +421,8 @@ def run_game():
                 run = False
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if GUN_STORE > 0:
-                    Bullet(player.rect.center[0] + 6, player.rect.center[1] + 6, pygame.mouse.get_pos()[0],
+                    Bullet(player.rect.center[0] + 6, player.rect.center[1] + 6,
+                           pygame.mouse.get_pos()[0],
                            pygame.mouse.get_pos()[1], True)
                     shoot_sound.play()
                     GUN_STORE -= 1
