@@ -15,12 +15,16 @@ BULLET_SPEED = 3
 DEATH = False
 reload = 0
 player_hp = 20
+HEAL_VISIBLE = False
+heal_x = None
+heal_y = None
 pygame.init()
 all_sprites = pygame.sprite.Group()
 tile_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 bullet_group = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()
+heal_group = pygame.sprite.Group()
 wall_group = pygame.sprite.Group()
 portal_group = pygame.sprite.Group()
 hitbar_rect = (10, 30)
@@ -67,7 +71,8 @@ tile_images = {'wall': load_image('wall_1.png'), 'empty': load_image('floor_1.pn
                'street': load_image('street.png'),
                'left': load_image('left.png'),
                'right': load_image('right.png'), 'down': load_image('down.png'),
-               'enemy': load_image('enemy_2.png'), 'portal': load_image('портал.png'), 'boss': load_image('boss.png')}
+               'enemy': load_image('enemy_2.png'), 'portal': load_image('портал.png'), 'boss': load_image('boss.png'),
+               'HEAL': load_image('HEAL.png')}
 player_image = load_image('main_hero_1.png')
 tile_width, tile_height = 50, 50
 cur = load_image('cur.png')
@@ -155,7 +160,7 @@ def pause():
 
 def death_menu():
     global DEATH, cur_level, player_hp, GUN_STORE, player, level_x, level_y, all_sprites, move_yp, move_xp, move_xm, \
-        move_ym
+        move_ym, HEAL_VISIBLE
     death = True
     while death:
         for event in pygame.event.get():
@@ -168,6 +173,7 @@ def death_menu():
             player_hp = 20
             GUN_STORE = 19
             cur_level = 0
+            HEAL_VISIBLE = False
             all_sprites.empty()
             tile_group.empty()
             player_group.empty()
@@ -213,6 +219,20 @@ class Tile(pygame.sprite.Sprite):
         self.rect.x, self.rect.y = tile_width * pos_x, tile_height * pos_y
 
 
+class HEAL(pygame.sprite.Sprite):
+    def __init__(self, tile_type, pos_x, pos_y):
+        super().__init__(heal_group, all_sprites)
+        self.image = tile_images[tile_type]
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = tile_width * pos_x, tile_height * pos_y
+
+    def update(self):
+        global player_hp
+        if pygame.sprite.spritecollideany(self, player_group):
+            player_hp += 3
+            self.kill()
+
+
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         super().__init__(enemy_group, all_sprites)
@@ -226,6 +246,7 @@ class Enemy(pygame.sprite.Sprite):
         self.reload = 0
 
     def update(self):
+        global HEAL_VISIBLE, heal_x, heal_y
         if player_group.sprites()[0].rect.x in range(self.rect.x - 450, self.rect.x + 450) and \
                 player_group.sprites()[0].rect.y in range(self.rect.y - 450, self.rect.y + 450):
             x, y = (player_group.sprites()[0].rect.center[0],
@@ -245,6 +266,8 @@ class Enemy(pygame.sprite.Sprite):
             pygame.sprite.spritecollideany(self, bullet_group).kill()
             self.hp -= BULLET_DAMAGE
             if self.hp <= 0:
+                if self.pos_x == heal_x and heal_y == self.pos_y:
+                    HEAL_VISIBLE = True
                 self.kill()
 
 
@@ -297,6 +320,7 @@ class Bullet(pygame.sprite.Sprite):
 
 
 def generate_level(level):
+    global heal_x, heal_y
     new_player, x, y = None, None, None
     for y in range(len(level)):
         for x in range(len(level[y])):
@@ -309,6 +333,12 @@ def generate_level(level):
             elif level[y][x] == '!':
                 Tile('empty', x, y)
                 Enemy('enemy', x, y)
+            elif level[y][x] == '+':
+                Tile('empty', x, y)
+                Enemy('enemy', x, y)
+                HEAL('HEAL', x, y)
+                heal_x = x
+                heal_y = y
             else:
                 Tile('empty', x, y)
                 new_player = Player(x, y)
@@ -402,8 +432,9 @@ def run_game():
         tile_group.draw(screen)
         player_group.draw(screen)
         enemy_group.draw(screen)
+        if HEAL_VISIBLE:
+            heal_group.draw(screen)
         bullet_group.draw(screen)
-        portal_group.draw(screen)
         cur_rect = cur.get_rect()
         cur_rect.center = pygame.mouse.get_pos()
         screen.blit(hitbar_image, hitbar_rect)
