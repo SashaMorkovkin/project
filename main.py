@@ -67,10 +67,12 @@ def load_image(name, colorkey=None):
     return image
 
 
-tile_images = {'wall': load_image('wall_1.png'), 'empty': load_image('floor_1.png'),
-               'street': load_image('street.png'),
-               'enemy': load_image('enemy_2.png'),
-               'HEAL': load_image('HEAL.png')}
+tile_images = {'wall': load_image('wall_2.png'),
+                                   'empty': load_image('floor_1.png'),
+                                   'street': load_image('street.png'),
+                                   'enemy': load_image('enemy_1.png'),
+                                   'HEAL': load_image('HEAL.png')
+               }
 player_image = load_image('main_hero_1.png')
 tile_width, tile_height = 50, 50
 cur = load_image('cur.png')
@@ -98,12 +100,52 @@ def start_screen():
                 terminate()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.pos[0] in range(66, 1308) and event.pos[1] in range(241, 449):
+                    choose_style()
                     return
                 if event.pos[0] in range(66, 1308) and event.pos[1] in range(505, 711):
                     settings()
                     return
                 if event.pos[0] in range(60, 1308) and event.pos[1] in range(761, 969):
                     terminate()
+        cur_rect = cur.get_rect()
+        cur_rect.center = pygame.mouse.get_pos()
+        screen.blit(fon, (0, 0))
+        screen.blit(cur, cur_rect)
+        clock.tick(FPS)
+        pygame.display.flip()
+
+def choose_style():
+    global tile_images, player_image
+    fon = pygame.transform.scale(load_image('choose_style.png'), (width, height))
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.pos[0] in range(130, 1670) and event.pos[1] in range(250, 400):
+                    tile_images = {'wall': load_image('wall_1.png'),
+                                   'empty': load_image('floor_1.png'),
+                                   'street': load_image('street.png'),
+                                   'enemy': load_image('enemy_1.png'),
+                                   'HEAL': load_image('HEAL.png')}
+                    player_image = load_image('main_hero_1.png')
+                    return
+                if event.pos[0] in range(130, 1670) and event.pos[1] in range(480, 630):
+                    tile_images = {'wall': load_image('wall_2.png'),
+                                   'empty': load_image('floor_2.png'),
+                                   'street': load_image('street.png'),
+                                   'enemy': load_image('enemy_2.png'),
+                                   'HEAL': load_image('HEAL.png')}
+                    player_image = load_image('main_hero_2.png')
+                    return
+                if event.pos[0] in range(130, 1670) and event.pos[1] in range(730, 870):
+                    tile_images = {'wall': load_image('wall_3.png'),
+                                   'empty': load_image('floor_3.png'),
+                                   'street': load_image('street.png'),
+                                   'enemy': load_image('enemy_3.png'),
+                                   'HEAL': load_image('HEAL.png')}
+                    player_image = load_image('main_hero_3.png')
+                    return
         cur_rect = cur.get_rect()
         cur_rect.center = pygame.mouse.get_pos()
         screen.blit(fon, (0, 0))
@@ -139,6 +181,7 @@ def settings():
 def terminate():
     sys.exit()
 
+start_screen()
 
 def pause():
     paused = True
@@ -316,7 +359,6 @@ class Bullet(pygame.sprite.Sprite):
                     self.pos[1] + self.dir[1] * BULLET_SPEED)
         self.rect = self.image.get_rect(center=self.pos)
 
-
 def generate_level(level):
     global heal_x, heal_y
     new_player, x, y = None, None, None
@@ -448,5 +490,4 @@ def run_game():
         pygame.display.flip()
 
 
-start_screen()
 run_game()
