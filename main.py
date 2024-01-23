@@ -42,7 +42,7 @@ death_text = font.render('Нажмите 1 для перезапуска игр�
 size = width, height = 1940, 1100
 clock = pygame.time.Clock()
 pygame.mixer.init()
-nameofmusic = input('Выберите музыку: Voyager/Cyberpunk?\nВведите 1 или 2\n')
+nameofmusic = input('Выберите музыку: Cyberpunk/Voyager?\nВведите 1 или 2\n')
 pygame.mixer.music.load('cyberpunk.wav' if nameofmusic == '1' else 'voyager.wav')
 pygame.mixer.music.play(-1)
 recharge = pygame.mixer.Sound('recharge.wav')
