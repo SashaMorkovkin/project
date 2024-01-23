@@ -96,7 +96,6 @@ def start_screen():
                 terminate()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.pos[0] in range(66, 1308) and event.pos[1] in range(241, 449):
-                    player, level_x, level_y = generate_level(load_level(new_level))
                     return
                 if event.pos[0] in range(66, 1308) and event.pos[1] in range(505, 711):
                     settings()
@@ -343,12 +342,13 @@ def generate_level(level):
     return new_player, x, y
 
 
+if not DEATH:
+    player, level_x, level_y = generate_level(load_level(new_level))
 camera = Camera()
 
 
-def run_game(player, level_x, level_y):
-    global run, GUN_STORE, is_reload, reload, move_yp, move_xp, move_xm, move_ym, new_level
-    player, level_x, level_y = generate_level(load_level(new_level))
+def run_game():
+    global run, GUN_STORE, is_reload, reload, move_yp, move_xp, move_xm, move_ym, new_level, player
     start_screen()
     while run:
         for event in pygame.event.get():
