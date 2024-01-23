@@ -5,7 +5,8 @@ import math
 import pygame_gui
 import threading
 
-new_level = 'level2.txt'
+new_level = 'level1.txt'
+levels = ['level1.txt', 'level2.txt', 'level3.txt', 'level4.txt']
 
 FPS = 70
 STEP = 3
@@ -13,12 +14,31 @@ VOLUME = 0.15
 BULLET_DAMAGE = 3
 GUN_STORE = 19
 BULLET_SPEED = 3
+DEATH = False
 reload = 0
 player_hp = 20
 pygame.init()
+all_sprites = pygame.sprite.Group()
+tile_group = pygame.sprite.Group()
+player_group = pygame.sprite.Group()
+bullet_group = pygame.sprite.Group()
+enemy_group = pygame.sprite.Group()
+animation_group = pygame.sprite.Group()
+wall_group = pygame.sprite.Group()
+portal_group = pygame.sprite.Group()
+hitbar_rect = (10, 30)
+is_reload = True
+run = True
+move_ym = False
+move_xm = False
+move_xp = False
+move_yp = False
 font = pygame.font.SysFont('Courier New CYR', 40)
-paused_text = font.render('Нажмите SPACE для продолжения игры', True, (255, 255, 255))
-size = width, height = 1700, 1100
+paused_text = font.render('Нажмите SPACE для продолжения игры\n\n   Нажмите CAPS для выхода'
+                          ' из игры', True, (255, 255, 255))
+death_text = font.render('Нажмите 1 для перезапуска игры\n\n   Нажмите 2 для выхода'
+                         ' из игры', True, (255, 255, 255))
+size = width, height = 1940, 1100
 clock = pygame.time.Clock()
 pygame.mixer.init()
 pygame.mixer.music.load('fonovaya_musick .wav')
@@ -48,54 +68,12 @@ def load_image(name, colorkey=None):
 
 tile_images = {'wall': load_image('wall_1.png'), 'empty': load_image('floor_1.png'), 'street': load_image('street.png'),
                'left': load_image('left.png'), 'right': load_image('right.png'), 'down': load_image('down.png'),
-               'enemy': load_image('enemy_2.png')}
+               'enemy': load_image('enemy_2.png'), 'portal': load_image('портал.png')}
 player_image = load_image('main_hero_1.png')
 tile_width, tile_height = 50, 50
-
-
-def start_screen():
-    fon = pygame.transform.scale(load_image('fon.jpg'), (width, height))
-    screen.blit(fon, (0, 0))
-    while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                terminate()
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.pos[0] in range(66, 1151) and event.pos[1] in range(241, 449):
-                    print('start')
-                    return
-                if event.pos[0] in range(66, 1151) and event.pos[1] in range(505, 711):
-                    settings()
-                    return
-                if event.pos[0] in range(60, 1151) and event.pos[1] in range(761, 969):
-                    terminate()
-        pygame.display.flip()
-        clock.tick(FPS)
-
-
-def settings():
-    fon = pygame.transform.scale(load_image('settings.png'), (width, height))
-    screen.blit(fon, (0, 0))
-    global VOLUME
-    while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                terminate()
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                print(event.pos)
-                if event.pos[0] in range(64, 135) and event.pos[1] in range(36, 136):
-                    return start_screen()
-                if event.pos[0] in range(341, 405) and event.pos[1] in range(349, 438):
-                    VOLUME += 0.005
-                    pygame.mixer.music.set_volume(VOLUME)
-                if event.pos[0] in range(464, 526) and event.pos[1] in range(347, 437) and VOLUME >= 0.01:
-                    VOLUME -= 0.005
-                    pygame.mixer.music.set_volume(VOLUME)
-        pygame.display.flip()
-
-
-def choose_lvl():
-    pass
+cur = load_image('cur.png')
+gun_image = load_image('gun_image.png')
+hitbar_image = load_image('hitbar.png')
 
 
 def load_level(file):
@@ -110,31 +88,54 @@ def load_level(file):
         terminate()
 
 
-def generate_level(level):
-    new_player, x, y = None, None, None
-    for y in range(len(level)):
-        for x in range(len(level[y])):
-            if level[y][x] == '.':
-                Tile('empty', x, y)
-            elif level[y][x] == '#':
-                Tile('wall', x, y)
-            elif level[y][x] == '-':
-                Tile('street', x, y)
-            elif level[y][x] == '<':
-                Tile('right', x, y)
-            elif level[y][x] == '>':
-                Tile('left', x, y)
-            elif level[y][x] == '+':
-                Tile('down', x, y)
-            elif level[y][x] == '+':
-                Tile('empty', x, y)
-            elif level[y][x] == '!':
-                Tile('empty', x, y)
-                Enemy('enemy', x, y)
-            else:
-                Tile('empty', x, y)
-                new_player = Player(x, y)
-    return new_player, x, y
+def start_screen():
+    fon = pygame.transform.scale(load_image('fon.jpg'), (width, height))
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.pos[0] in range(66, 1308) and event.pos[1] in range(241, 449):
+                    player, level_x, level_y = generate_level(load_level(new_level))
+                    return
+                if event.pos[0] in range(66, 1308) and event.pos[1] in range(505, 711):
+                    settings()
+                    return
+                if event.pos[0] in range(60, 1308) and event.pos[1] in range(761, 969):
+                    terminate()
+        cur_rect = cur.get_rect()
+        cur_rect.center = pygame.mouse.get_pos()
+        screen.blit(fon, (0, 0))
+        screen.blit(cur, cur_rect)
+        clock.tick(FPS)
+        pygame.display.flip()
+
+
+def settings():
+    fon = pygame.transform.scale(load_image('settings.png'), (width, height))
+    global VOLUME
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.pos[0] in range(73, 153) and event.pos[1] in range(36, 136):
+                    return start_screen()
+                if event.pos[0] in range(384, 461) and event.pos[1] in range(350, 441):
+                    VOLUME += 0.05
+                    pygame.mixer.music.set_volume(VOLUME)
+                if event.pos[0] in range(529, 602) and event.pos[1] in range(347, 437) and VOLUME >= 0.01:
+                    VOLUME -= 0.05
+                    pygame.mixer.music.set_volume(VOLUME)
+        cur_rect = cur.get_rect()
+        cur_rect.center = pygame.mouse.get_pos()
+        screen.blit(fon, (0, 0))
+        screen.blit(cur, cur_rect)
+        pygame.display.flip()
+
+
+def terminate():
+    sys.exit()
 
 
 def pause():
@@ -146,9 +147,34 @@ def pause():
         keys = pygame.key.get_pressed()
         if keys[pygame.K_SPACE]:
             paused = False
+        if keys[pygame.K_CAPSLOCK]:
+            terminate()
         pygame.display.update()
         screen.blit(paused_text, (800, 200))
         clock.tick(FPS)
+
+
+def death_menu():
+    global DEATH, new_level, player_hp, GUN_STORE
+    death = True
+    while death:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+        DEATH = True
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_1]:
+            death = False
+            player_hp = 20
+            GUN_STORE = 19
+            new_level = 'level1.txt'
+            DEATH = False
+        if keys[pygame.K_2]:
+            terminate()
+        pygame.display.update()
+        screen.blit(death_text, (800, 200))
+        clock.tick(FPS)
+    run_game()
 
 
 class Camera:
@@ -213,9 +239,9 @@ class Enemy(pygame.sprite.Sprite):
         self.reload = 0
 
     def update(self):
-        if player.rect.x in range(self.rect.x - 300, self.rect.x + 300) and \
-                player.rect.y in range(self.rect.y - 300, self.rect.y + 300):
-            x, y = player.rect.center[0], player.rect.center[1]
+        if player_group.sprites()[0].rect.x in range(self.rect.x - 300, self.rect.x + 300) and \
+                player_group.sprites()[0].rect.y in range(self.rect.y - 300, self.rect.y + 300):
+            x, y = player_group.sprites()[0].rect.center[0], player_group.sprites()[0].rect.center[1]
             x1, y1 = x - self.rect.x, y - self.rect.y
             angle = (180 / math.pi) * -math.atan2(y1, x1)
             self.image = pygame.transform.rotate(self.orig_image, int(angle))
@@ -226,17 +252,18 @@ class Enemy(pygame.sprite.Sprite):
                 pygame.sprite.spritecollideany(self, bullet_group).kill()
                 self.hp -= BULLET_DAMAGE
                 if self.hp <= 0:
+                    self.kill()
                     AnimatedSprite(load_image("animation_enemy.jpg"), 8, 2, self.pos_x, self.pos_y)
                     print('enemy_killed')
                 if self.reload >= 170:
-                    Bullet(self.rect.center[0], self.rect.center[1], player.rect.center[0],
-                           player.rect.center[1], False)
+                    Bullet(self.rect.center[0], self.rect.center[1], player_group.sprites()[0].rect.center[0],
+                           player_group.sprites()[0].rect.center[1], False)
                     self.reload = 0
                     shoot_sound.play()
 
     def shoot(self):
-        Bullet(self.rect.center[0], self.rect.center[1], player.rect.center[0],
-               player.rect.center[1], False)
+        Bullet(self.rect.center[0], self.rect.center[1], player_group.sprites()[0].rect.center[0],
+               player_group.sprites()[0].rect.center[1], False)
         shoot_sound.play()
         threading.Timer(1.0, self.shoot).start()
 
@@ -264,8 +291,7 @@ class Player(pygame.sprite.Sprite):
             player_hp -= BULLET_DAMAGE
             damage_sound.play()
             if player_hp <= 0:
-                print('game_over')
-                terminate()
+                death_menu()
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -290,107 +316,126 @@ class Bullet(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center=self.pos)
 
 
-def terminate():
-    sys.exit()
-
-
-all_sprites = pygame.sprite.Group()
-tile_group = pygame.sprite.Group()
-player_group = pygame.sprite.Group()
-bullet_group = pygame.sprite.Group()
-enemy_group = pygame.sprite.Group()
-animation_group = pygame.sprite.Group()
-wall_group = pygame.sprite.Group()
-cur = load_image('cur.png')
-gun_image = load_image('gun_image.png')
-hitbar_image = load_image('hitbar.png')
-hitbar_rect = (10, 30)
-is_reload = True
-start_screen()
-run = True
-player, level_x, level_y = generate_level(load_level(new_level))
-camera = Camera()
-move_ym = False
-move_xm = False
-move_xp = False
-move_yp = False
-while run:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            run = False
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if GUN_STORE > 0:
-                Bullet(player.rect.center[0] + 6, player.rect.center[1] + 6, pygame.mouse.get_pos()[0],
-                       pygame.mouse.get_pos()[1], True)
-                shoot_sound.play()
-                GUN_STORE -= 1
+def generate_level(level):
+    new_player, x, y = None, None, None
+    for y in range(len(level)):
+        for x in range(len(level[y])):
+            if level[y][x] == '.':
+                Tile('empty', x, y)
+            elif level[y][x] == '#':
+                Tile('wall', x, y)
+            elif level[y][x] == '-':
+                Tile('street', x, y)
+            elif level[y][x] == '<':
+                Tile('right', x, y)
+            elif level[y][x] == '>':
+                Tile('left', x, y)
+            elif level[y][x] == '+':
+                Tile('down', x, y)
+            elif level[y][x] == '+':
+                Tile('empty', x, y)
+            elif level[y][x] == '!':
+                Tile('empty', x, y)
+                Enemy('enemy', x, y)
             else:
-                if is_reload:
-                    recharge.play()
-                    is_reload = False
-                reload += clock.get_time()
-                if reload >= 60:
-                    GUN_STORE = 19
-                    reload = 0
-                    is_reload = True
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
-                pause()
-            if event.key == pygame.K_s:
-                move_yp = True
-            if event.key == pygame.K_a:
-                move_xm = True
-            if event.key == pygame.K_d:
-                move_xp = True
-            if event.key == pygame.K_w:
-                move_ym = True
-        if event.type == pygame.KEYUP:
-            if event.key == pygame.K_s:
-                move_yp = False
-            if event.key == pygame.K_a:
-                move_xm = False
-            if event.key == pygame.K_d:
-                move_xp = False
-            if event.key == pygame.K_w:
-                move_ym = False
-    if move_yp:
-        player.rect.y += STEP
-        if (pygame.sprite.spritecollideany(player, wall_group) or
-                player.rect.y + player.rect.height > height):
-            player.rect.y -= STEP
-    if move_xp:
-        player.rect.x += STEP
-        if (pygame.sprite.spritecollideany(player, wall_group) or
-                player.rect.x + player.rect.width > width):
-            player.rect.x -= STEP
-    if move_ym:
-        player.rect.y -= STEP
-        if pygame.sprite.spritecollideany(player, wall_group) or player.rect.y < 0:
+                Tile('empty', x, y)
+                new_player = Player(x, y)
+    return new_player, x, y
+
+
+camera = Camera()
+
+
+def run_game(player, level_x, level_y):
+    global run, GUN_STORE, is_reload, reload, move_yp, move_xp, move_xm, move_ym, new_level
+    player, level_x, level_y = generate_level(load_level(new_level))
+    start_screen()
+    while run:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT or DEATH:
+                run = False
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if GUN_STORE > 0:
+                    Bullet(player.rect.center[0] + 6, player.rect.center[1] + 6, pygame.mouse.get_pos()[0],
+                           pygame.mouse.get_pos()[1], True)
+                    shoot_sound.play()
+                    GUN_STORE -= 1
+                else:
+                    if is_reload:
+                        recharge.play()
+                        is_reload = False
+                    reload += clock.get_time()
+                    if reload >= 60:
+                        GUN_STORE = 19
+                        reload = 0
+                        is_reload = True
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    pause()
+                if event.key == pygame.K_s:
+                    move_yp = True
+                if event.key == pygame.K_a:
+                    move_xm = True
+                if event.key == pygame.K_d:
+                    move_xp = True
+                if event.key == pygame.K_w:
+                    move_ym = True
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_s:
+                    move_yp = False
+                if event.key == pygame.K_a:
+                    move_xm = False
+                if event.key == pygame.K_d:
+                    move_xp = False
+                if event.key == pygame.K_w:
+                    move_ym = False
+        if move_yp:
             player.rect.y += STEP
-    if move_xm:
-        player.rect.x -= STEP
-        if pygame.sprite.spritecollideany(player, wall_group) or player.rect.x < 0:
+            if (pygame.sprite.spritecollideany(player, wall_group) or
+                    player.rect.y + player.rect.height > height):
+                player.rect.y -= STEP
+        if move_xp:
             player.rect.x += STEP
-    camera.update(player)
-    for sprite in all_sprites:
-        camera.apply(sprite)
-    patrons = font.render(f'{GUN_STORE}/{19}', True, (255, 255, 255))
-    bullet_group.update()
-    tile_group.draw(screen)
-    wall_group.draw(screen)
-    enemy_group.draw(screen)
-    player_group.draw(screen)
-    bullet_group.draw(screen)
-    cur_rect = cur.get_rect()
-    cur_rect.center = pygame.mouse.get_pos()
-    screen.blit(hitbar_image, hitbar_rect)
-    screen.blit(gun_image, (30, 880))
-    screen.blit(patrons, (60, 1000))
-    pygame.draw.rect(screen, 'grey', (60, 34, 192, 23))
-    pygame.draw.rect(screen, 'red', (60, 34, 192 * (player_hp / 20), 23))
-    pygame.draw.rect(screen, 'black', (60, 34, 194, 25), 3)
-    screen.blit(cur, cur_rect)
-    clock.tick(FPS)
-    all_sprites.update()
-    animation_group.update()
-    pygame.display.flip()
+            if (pygame.sprite.spritecollideany(player, wall_group) or
+                    player.rect.x + player.rect.width > width):
+                player.rect.x -= STEP
+        if move_ym:
+            player.rect.y -= STEP
+            if pygame.sprite.spritecollideany(player, wall_group) or player.rect.y < 0:
+                player.rect.y += STEP
+        if move_xm:
+            player.rect.x -= STEP
+            if pygame.sprite.spritecollideany(player, wall_group) or player.rect.x < 0:
+                player.rect.x += STEP
+        camera.update(player)
+        for sprite in all_sprites:
+            camera.apply(sprite)
+        patrons = font.render(f'{GUN_STORE}/{19}', True, (255, 255, 255))
+        if len(enemy_group.sprites()) == 0:
+            new_level = 'level2.txt'
+            player, level_x, level_y = generate_level(load_level(new_level))
+            run = False
+            run_game()
+        bullet_group.update()
+        tile_group.draw(screen)
+        player_group.draw(screen)
+        enemy_group.draw(screen)
+        bullet_group.draw(screen)
+        portal_group.draw(screen)
+        cur_rect = cur.get_rect()
+        cur_rect.center = pygame.mouse.get_pos()
+        screen.blit(hitbar_image, hitbar_rect)
+        screen.blit(gun_image, (30, 880))
+        screen.blit(patrons, (60, 1000))
+        pygame.draw.rect(screen, 'grey', (60, 34, 192, 23))
+        pygame.draw.rect(screen, 'red', (60, 34, 192 * (player_hp / 20), 23))
+        pygame.draw.rect(screen, 'black', (60, 34, 194, 25), 3)
+        screen.blit(cur, cur_rect)
+        clock.tick(FPS)
+        portal_group.update()
+        all_sprites.update()
+        animation_group.update()
+        pygame.display.flip()
+
+
+run_game()
