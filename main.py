@@ -43,7 +43,7 @@ death_text = font.render('Нажмите 1 для перезапуска игр�
 size = width, height = 1940, 1100
 clock = pygame.time.Clock()
 pygame.mixer.init()
-pygame.mixer.music.load('cyberpunk.wav')
+pygame.mixer.music.load(random.choice(['cyberpunk.wav', 'voyager.wav']))
 pygame.mixer.music.play(-1)
 recharge = pygame.mixer.Sound('recharge.wav')
 shoot_sound = pygame.mixer.Sound('shoot_sound.wav')
