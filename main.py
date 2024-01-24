@@ -19,6 +19,7 @@ HEAL_VISIBLE = False
 heal_x = None
 heal_y = None
 pygame.init()
+pygame.mouse.set_visible(False)
 all_sprites = pygame.sprite.Group()
 tile_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
@@ -42,8 +43,7 @@ death_text = font.render('Нажмите 1 для перезапуска игр�
 size = width, height = 1940, 1100
 clock = pygame.time.Clock()
 pygame.mixer.init()
-nameofmusic = input('Выберите музыку: Cyberpunk/Voyager?\nВведите 1 или 2\n')
-pygame.mixer.music.load('cyberpunk.wav' if nameofmusic == '1' else 'voyager.wav')
+pygame.mixer.music.load('cyberpunk.wav')
 pygame.mixer.music.play(-1)
 recharge = pygame.mixer.Sound('recharge.wav')
 shoot_sound = pygame.mixer.Sound('shoot_sound.wav')
@@ -145,7 +145,7 @@ def choose_style():
                                    'HEAL': load_image('HEAL.png')}
                     player_image = load_image('main_hero_2.png')
                     return
-                if event.pos[0] in range(130, 1670) and event.pos[1] in range(730, 870):
+                if event.pos[0] in range(130, 1812) and event.pos[1] in range(788, 981):
                     tile_images = {'wall': load_image('wall_3.png'),
                                    'empty': load_image('floor_3.png'),
                                    'street': load_image('street.png'),
