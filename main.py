@@ -2,6 +2,7 @@ import pygame
 import sys
 import os
 import math
+import random
 
 # необходимые переменные, вызовы функций
 cur_level = 0
@@ -15,7 +16,6 @@ BULLET_SPEED = 3
 DEATH = False
 reload = 0
 player_hp = 20
-HEAL_VISIBLE = False
 heal_x = None
 heal_y = None
 pygame.init()
@@ -212,8 +212,8 @@ def pause():
 
 # экран завершения игры
 def death_menu():
-    global DEATH, cur_level, player_hp, GUN_STORE, player, level_x, level_y, all_sprites, move_yp, move_xp, move_xm, \
-        move_ym, HEAL_VISIBLE
+    global DEATH, cur_level, player_hp, GUN_STORE, player, level_x, level_y, \
+        all_sprites, move_yp, move_xp, move_xm, move_ym
     death = True
     while death:
         for event in pygame.event.get():
@@ -226,11 +226,11 @@ def death_menu():
             player_hp = 20
             GUN_STORE = 19
             cur_level = 0
-            HEAL_VISIBLE = False
             all_sprites.empty()
             tile_group.empty()
             player_group.empty()
             bullet_group.empty()
+            heal_group.empty()
             enemy_group.empty()
             wall_group.empty()
             portal_group.empty()
@@ -275,16 +275,16 @@ class Tile(pygame.sprite.Sprite):
 
 
 # хилл
-class HEAL(pygame.sprite.Sprite):
+class Heal(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         super().__init__(heal_group, all_sprites)
         self.image = tile_images[tile_type]
         self.rect = self.image.get_rect()
-        self.rect.x, self.rect.y = tile_width * pos_x, tile_height * pos_y
+        self.rect.x, self.rect.y = pos_x, pos_y
 
     def update(self):
         global player_hp
-        if pygame.sprite.spritecollideany(self, player_group):
+        if pygame.sprite.spritecollideany(self, player_group) and player_hp <= 17:
             player_hp += 3
             self.kill()
 
@@ -324,8 +324,8 @@ class Enemy(pygame.sprite.Sprite):
             pygame.sprite.spritecollideany(self, bullet_group).kill()
             self.hp -= BULLET_DAMAGE
             if self.hp <= 0:
-                if self.pos_x == heal_x and heal_y == self.pos_y:
-                    HEAL_VISIBLE = True
+                if random.choices([True, False], weights=[1, 0], k=1)[0]:
+                    Heal('HEAL', self.rect.x, self.rect.y)
                 self.kill()
 
 
@@ -397,7 +397,6 @@ def generate_level(level):
             elif level[y][x] == '+':
                 Tile('empty', x, y)
                 Enemy('enemy', x, y)
-                HEAL('HEAL', x, y)
                 heal_x = x
                 heal_y = y
             else:
@@ -480,6 +479,7 @@ def run_game():
             player_group.empty()
             bullet_group.empty()
             enemy_group.empty()
+            heal_group.empty()
             wall_group.empty()
             portal_group.empty()
             move_yp, move_xp, move_xm, move_ym = False, False, False, False
@@ -495,8 +495,7 @@ def run_game():
         tile_group.draw(screen)
         player_group.draw(screen)
         enemy_group.draw(screen)
-        if HEAL_VISIBLE:
-            heal_group.draw(screen)
+        heal_group.draw(screen)
         bullet_group.draw(screen)
         cur_rect = cur.get_rect()
         cur_rect.center = pygame.mouse.get_pos()
